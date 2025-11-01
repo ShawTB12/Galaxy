@@ -21,6 +21,7 @@ Thumbs.db
 *.crt
 *.json
 !data/universe.json  # ← プロジェクトの出力データのみ許可
+!vercel.json  # ← Vercelデプロイ設定
 
 # Backup
 *.bak

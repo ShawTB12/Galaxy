@@ -1,0 +1,15 @@
+{
+  "buildCommand": null,
+  "outputDirectory": "web",
+  "routes": [
+    {
+      "src": "/",
+      "dest": "/neural-galaxy.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ]
+}
+
