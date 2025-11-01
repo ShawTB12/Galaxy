@@ -16,6 +16,7 @@ let lineMesh;
 let particleVelocity = [];
 let particleMetadata = []; // 各パーティクルのメタデータ
 let departmentNebulas = []; // 部署星雲群
+let departmentLabels = []; // 部署ラベル群
 let trailHistory = []; // 各パーティクルの軌跡履歴
 let trailLines = []; // トレイル描画用の線群
 let coiqParticles = []; // 協働指数の微粒子群
@@ -613,7 +614,12 @@ function createDepartmentNebulas() {
             pos.normalize().multiplyScalar(sphereRadius * (0.85 + Math.random() * 0.18));
             
             nebulaPositions.push(pos.x, pos.y, pos.z);
-            nebulaColors.push(color.r, color.g, color.b);
+            // 色の強度を上げる（より濃く）
+            nebulaColors.push(
+                Math.min(color.r * 1.5, 1.0),
+                Math.min(color.g * 1.5, 1.0),
+                Math.min(color.b * 1.5, 1.0)
+            );
         }
         
         // 星雲のジオメトリとマテリアルを作成
@@ -622,10 +628,10 @@ function createDepartmentNebulas() {
         nebulaGeometry.setAttribute('color', new THREE.Float32BufferAttribute(nebulaColors, 3));
         
         const nebulaMaterial = new THREE.PointsMaterial({
-            size: 0.3, // サイズを少し大きく
+            size: 0.4, // サイズを大きく（0.3 → 0.4）
             vertexColors: true,
             transparent: true,
-            opacity: 0.15, // 透明度を上げて見やすく
+            opacity: 0.25, // 透明度を上げて色を濃く（0.15 → 0.25）
             blending: THREE.AdditiveBlending,
             sizeAttenuation: true,
             depthTest: true,
@@ -642,9 +648,68 @@ function createDepartmentNebulas() {
         
         galaxyGroup.add(nebula);
         departmentNebulas.push(nebula);
+        
+        // ラベルを作成
+        createDepartmentLabel(dept, center);
     });
     
     console.log('Department nebulas created:', departmentNebulas.length);
+}
+
+// 部署ラベルを作成
+function createDepartmentLabel(dept, centerPosition) {
+    const label = document.createElement('div');
+    label.className = `hologram-label ${dept.id}`;
+    label.textContent = dept.name;
+    label.style.position = 'fixed'; // fixed位置指定で確実に表示
+    document.body.appendChild(label);
+    
+    console.log('Label created for:', dept.name, 'at position:', centerPosition);
+    
+    departmentLabels.push({
+        element: label,
+        department: dept,
+        position: centerPosition.clone()
+    });
+}
+
+// ラベルの位置を更新（3D座標を2Dスクリーン座標に変換）
+function updateDepartmentLabels() {
+    if (!renderer || !camera || !galaxyGroup) return;
+    
+    departmentLabels.forEach(labelData => {
+        const { element, department, position } = labelData;
+        
+        // 銀河グループのローカル座標をワールド座標に変換
+        const worldPosition = position.clone();
+        worldPosition.applyMatrix4(galaxyGroup.matrixWorld);
+        
+        // 3D座標をスクリーン座標に変換
+        const vector = worldPosition.clone();
+        vector.project(camera);
+        
+        // キャンバスコンテナの位置を考慮
+        const canvasContainer = document.getElementById('canvas-container');
+        if (!canvasContainer) return;
+        
+        const rect = canvasContainer.getBoundingClientRect();
+        
+        // スクリーン座標を計算（0.5を中心として正規化された座標を画面座標に変換）
+        const screenX = (vector.x * 0.5 + 0.5) * rect.width + rect.left;
+        const screenY = (-vector.y * 0.5 + 0.5) * rect.height + rect.top;
+        
+        // カメラの後ろにある場合は非表示（画面外チェックは緩和）
+        if (vector.z > 1) {
+            element.style.display = 'none';
+        } else {
+            element.style.display = 'block';
+            // fixed位置指定なので、直接left/topを設定
+            element.style.left = screenX + 'px';
+            element.style.top = screenY + 'px';
+            element.style.opacity = '1';
+            // transformはアニメーションで制御されるので、ここでは設定しない
+        }
+    });
 }
 
 // 部署メンバーの重心を計算（球体表面上）
@@ -858,6 +923,9 @@ function animate() {
     //         }
     //     });
     // }
+    
+    // 部署ラベルの位置を更新
+    updateDepartmentLabels();
     
     renderer.render(scene, camera);
 }

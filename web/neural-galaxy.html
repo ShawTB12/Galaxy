@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agents Galaxy - 組織の神経宇宙</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -296,6 +299,91 @@
             display: none;
             font-size: 12px;
             z-index: 1000;
+        }
+        
+        /* ホログラム・オーバーレイラベル */
+        .hologram-label {
+            position: fixed;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700; /* 500 → 700（太く） */
+            font-size: 16px; /* 14px → 16px（大きく） */
+            color: #FFFFFF; /* 文字色を白に統一（コントラスト向上） */
+            background: rgba(0, 255, 200, 0.5); /* 0.25 → 0.5（背景を濃く） */
+            backdrop-filter: blur(10px); /* 8px → 10px（ぼかしを少し強く） */
+            border: 2px solid rgba(0, 255, 200, 0.7); /* 1px → 2px、0.4 → 0.7（ボーダーを強調） */
+            border-radius: 8px; /* 6px → 8px（角を少し丸く） */
+            padding: 10px 20px; /* 8px 16px → 10px 20px（パディングを大きく） */
+            pointer-events: none;
+            white-space: nowrap;
+            z-index: 900;
+            box-shadow: 0 0 30px rgba(0, 255, 200, 0.5), inset 0 0 15px rgba(0, 255, 200, 0.2); /* シャドウを強調 */
+            text-shadow: 0 0 15px rgba(255, 255, 255, 1),
+                         0 0 25px rgba(0, 255, 200, 0.8),
+                         0 2px 4px rgba(0, 0, 0, 0.5); /* 白のシャドウを追加、濃い影も追加 */
+            animation: hologramPulse 3s ease-in-out infinite;
+            transform: translate(-50%, -50%);
+        }
+        
+        @keyframes hologramPulse {
+            0%, 100% {
+                opacity: 0.9;
+                transform: translate(-50%, -50%) scale(1);
+            }
+            50% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.02);
+            }
+        }
+        
+        /* 各部署の色に合わせたラベル */
+        .hologram-label.consumer {
+            color: #FFFFFF; /* 白に統一 */
+            background: rgba(33, 150, 243, 0.5); /* 0.25 → 0.5 */
+            border: 2px solid rgba(33, 150, 243, 0.7); /* 1px → 2px、0.4 → 0.7 */
+            box-shadow: 0 0 30px rgba(33, 150, 243, 0.5), inset 0 0 15px rgba(33, 150, 243, 0.2);
+            text-shadow: 0 0 15px rgba(255, 255, 255, 1),
+                         0 0 25px rgba(33, 150, 243, 0.8),
+                         0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .hologram-label.corporate {
+            color: #FFFFFF;
+            background: rgba(255, 193, 7, 0.5);
+            border: 2px solid rgba(255, 193, 7, 0.7);
+            box-shadow: 0 0 30px rgba(255, 193, 7, 0.5), inset 0 0 15px rgba(255, 193, 7, 0.2);
+            text-shadow: 0 0 15px rgba(255, 255, 255, 1),
+                         0 0 25px rgba(255, 193, 7, 0.8),
+                         0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .hologram-label.technology {
+            color: #FFFFFF;
+            background: rgba(76, 175, 80, 0.5);
+            border: 2px solid rgba(76, 175, 80, 0.7);
+            box-shadow: 0 0 30px rgba(76, 175, 80, 0.5), inset 0 0 15px rgba(76, 175, 80, 0.2);
+            text-shadow: 0 0 15px rgba(255, 255, 255, 1),
+                         0 0 25px rgba(76, 175, 80, 0.8),
+                         0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .hologram-label.it {
+            color: #FFFFFF;
+            background: rgba(233, 30, 99, 0.5);
+            border: 2px solid rgba(233, 30, 99, 0.7);
+            box-shadow: 0 0 30px rgba(233, 30, 99, 0.5), inset 0 0 15px rgba(233, 30, 99, 0.2);
+            text-shadow: 0 0 15px rgba(255, 255, 255, 1),
+                         0 0 25px rgba(233, 30, 99, 0.8),
+                         0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .hologram-label.finance {
+            color: #FFFFFF;
+            background: rgba(156, 39, 176, 0.5);
+            border: 2px solid rgba(156, 39, 176, 0.7);
+            box-shadow: 0 0 30px rgba(156, 39, 176, 0.5), inset 0 0 15px rgba(156, 39, 176, 0.2);
+            text-shadow: 0 0 15px rgba(255, 255, 255, 1),
+                         0 0 25px rgba(156, 39, 176, 0.8),
+                         0 2px 4px rgba(0, 0, 0, 0.5);
         }
     </style>
 </head>
