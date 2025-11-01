@@ -1088,19 +1088,31 @@ function setupSidebar() {
     toggleBtn.addEventListener('click', () => {
         isOpen = !isOpen;
         
+        const dashboardContainer = document.getElementById('dashboard-container');
+        
         if (isOpen) {
             sidebar.classList.remove('collapsed');
             toggleBtn.classList.add('active');
             canvasContainer.classList.remove('collapsed');
+            if (dashboardContainer) {
+                dashboardContainer.classList.remove('collapsed');
+            }
         } else {
             sidebar.classList.add('collapsed');
             toggleBtn.classList.remove('active');
             canvasContainer.classList.add('collapsed');
+            if (dashboardContainer) {
+                dashboardContainer.classList.add('collapsed');
+            }
         }
         
         // カメラのアスペクト比を調整
         setTimeout(() => {
             onWindowResize();
+            // ダッシュボードのリサイズ処理
+            if (typeof window.Dashboard !== 'undefined' && window.Dashboard.onDashboardResize) {
+                window.Dashboard.onDashboardResize();
+            }
         }, 400);
     });
     
@@ -1123,14 +1135,47 @@ function setupSidebar() {
 function handlePageChange(page) {
     console.log(`Navigating to: ${page}`);
     
+    const canvasContainer = document.getElementById('canvas-container');
+    const dashboardContainer = document.getElementById('dashboard-container');
+    const sidebar = document.getElementById('sidebar');
+    const isSidebarOpen = !sidebar.classList.contains('collapsed');
+    
     switch(page) {
         case 'home':
-            // ホーム表示（現在の3D表示）
+            // ホーム表示（3D銀河ビュー）
+            if (canvasContainer) {
+                canvasContainer.style.display = 'block';
+            }
+            if (dashboardContainer) {
+                dashboardContainer.style.display = 'none';
+                // サイドバーの状態に応じてクラスを設定
+                if (!isSidebarOpen) {
+                    dashboardContainer.classList.add('collapsed');
+                } else {
+                    dashboardContainer.classList.remove('collapsed');
+                }
+            }
             break;
             
         case 'dashboard':
-            // ダッシュボード表示（将来の拡張用）
-            alert('Dashboard機能は今後実装予定です');
+            // ダッシュボード表示
+            if (canvasContainer) {
+                canvasContainer.style.display = 'none';
+            }
+            if (dashboardContainer) {
+                dashboardContainer.style.display = 'block';
+                // サイドバーの状態に応じてクラスを設定
+                if (!isSidebarOpen) {
+                    dashboardContainer.classList.add('collapsed');
+                } else {
+                    dashboardContainer.classList.remove('collapsed');
+                }
+                
+                // ダッシュボードを初期化（初回のみ）
+                if (typeof window.Dashboard !== 'undefined' && window.Dashboard.initDashboard) {
+                    window.Dashboard.initDashboard();
+                }
+            }
             break;
             
         case 'settings':
@@ -1152,6 +1197,11 @@ function onWindowResize() {
     camera.aspect = containerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(containerWidth, window.innerHeight);
+    
+    // ダッシュボードのリサイズ処理
+    if (typeof window.Dashboard !== 'undefined' && window.Dashboard.onDashboardResize) {
+        window.Dashboard.onDashboardResize();
+    }
 }
 
 // クリックイベント

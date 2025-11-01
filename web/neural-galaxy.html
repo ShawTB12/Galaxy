@@ -720,6 +720,473 @@
             box-shadow: 0 0 40px rgba(156, 39, 176, 0.4),
                         inset 0 0 20px rgba(156, 39, 176, 0.1);
         }
+        
+        /* ==========================================
+           Dashboard Styles
+           ========================================== */
+        
+        #dashboard-container {
+            position: fixed;
+            left: 280px;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            overflow-y: auto;
+            padding: 30px;
+            background: transparent;
+            transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        #dashboard-container.collapsed {
+            left: 0;
+        }
+        
+        /* Dashboard Summary */
+        .dashboard-summary {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .summary-card {
+            flex: 1;
+            background: rgba(10, 20, 40, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(79, 195, 247, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 0 20px rgba(79, 195, 247, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .summary-card:hover {
+            border-color: rgba(79, 195, 247, 0.6);
+            box-shadow: 0 0 30px rgba(79, 195, 247, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        .summary-icon {
+            font-size: 40px;
+            opacity: 0.8;
+        }
+        
+        .summary-content {
+            flex: 1;
+        }
+        
+        .summary-label {
+            font-size: 12px;
+            color: #90caf9;
+            margin-bottom: 5px;
+        }
+        
+        .summary-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #ffffff;
+            font-family: 'Orbitron', sans-serif;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+        
+        /* Dashboard Modules */
+        .dashboard-modules {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .module {
+            background: rgba(10, 20, 40, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(79, 195, 247, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            min-height: 400px;
+            box-shadow: 0 0 20px rgba(79, 195, 247, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .module:hover {
+            border-color: rgba(79, 195, 247, 0.5);
+            box-shadow: 0 0 30px rgba(79, 195, 247, 0.3);
+        }
+        
+        .module-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(79, 195, 247, 0.2);
+        }
+        
+        .module-header h3 {
+            font-size: 18px;
+            color: #4fc3f7;
+            margin: 0;
+            font-weight: 600;
+            text-shadow: 0 0 10px rgba(79, 195, 247, 0.5);
+        }
+        
+        .module-controls {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .sort-dropdown {
+            background: rgba(79, 195, 247, 0.1);
+            border: 1px solid rgba(79, 195, 247, 0.3);
+            border-radius: 6px;
+            color: #90caf9;
+            padding: 6px 12px;
+            font-size: 12px;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .sort-dropdown:hover {
+            background: rgba(79, 195, 247, 0.2);
+            border-color: rgba(79, 195, 247, 0.5);
+        }
+        
+        .control-btn {
+            background: rgba(79, 195, 247, 0.1);
+            border: 1px solid rgba(79, 195, 247, 0.3);
+            border-radius: 6px;
+            color: #90caf9;
+            padding: 6px 16px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .control-btn:hover {
+            background: rgba(79, 195, 247, 0.2);
+            border-color: rgba(79, 195, 247, 0.5);
+            color: #ffffff;
+        }
+        
+        .module-content {
+            position: relative;
+        }
+        
+        /* Top Agents Cards */
+        .agent-card {
+            background: rgba(79, 195, 247, 0.05);
+            border: 1px solid rgba(79, 195, 247, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .agent-card:hover {
+            background: rgba(79, 195, 247, 0.1);
+            border-color: rgba(79, 195, 247, 0.4);
+            box-shadow: 0 0 15px rgba(79, 195, 247, 0.3);
+            transform: translateX(5px);
+        }
+        
+        .agent-rank {
+            font-size: 24px;
+            font-weight: 700;
+            color: #4fc3f7;
+            min-width: 40px;
+            text-align: center;
+            font-family: 'Orbitron', sans-serif;
+        }
+        
+        .agent-info {
+            flex: 1;
+        }
+        
+        .agent-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #ffffff;
+            margin-bottom: 5px;
+        }
+        
+        .agent-type {
+            font-size: 11px;
+            color: #90caf9;
+            background: rgba(79, 195, 247, 0.2);
+            padding: 2px 8px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        
+        .agent-stats {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+            color: #90caf9;
+            margin-top: 8px;
+        }
+        
+        .agent-meter {
+            min-width: 60px;
+        }
+        
+        /* Chart Legend */
+        .chart-legend {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+        }
+        
+        .legend-item-new {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+        }
+        
+        .legend-color-box {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            box-shadow: 0 0 10px currentColor;
+        }
+        
+        /* Usage Tracker */
+        .dept-usage-row {
+            margin-bottom: 20px;
+        }
+        
+        .dept-usage-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .dept-usage-name {
+            font-size: 14px;
+            color: #ffffff;
+            font-weight: 500;
+        }
+        
+        .dept-usage-value {
+            font-size: 12px;
+            color: #90caf9;
+        }
+        
+        .dept-usage-canvas {
+            width: 100%;
+            height: 60px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+        
+        .dept-usage-canvas:hover {
+            box-shadow: 0 0 15px rgba(79, 195, 247, 0.3);
+        }
+        
+        .dept-sparkline {
+            margin-top: 10px;
+            display: none;
+            animation: slideDown 0.3s ease;
+        }
+        
+        .dept-sparkline.active {
+            display: block;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Department Scorecards */
+        .dashboard-scorecards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .dept-scorecard {
+            background: rgba(10, 20, 40, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(79, 195, 247, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(79, 195, 247, 0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .dept-scorecard:hover {
+            border-color: rgba(79, 195, 247, 0.5);
+            box-shadow: 0 0 30px rgba(79, 195, 247, 0.3);
+            transform: translateY(-3px);
+        }
+        
+        .scorecard-header {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(79, 195, 247, 0.2);
+        }
+        
+        .scorecard-dept-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #4fc3f7;
+            margin-bottom: 5px;
+        }
+        
+        .scorecard-metrics {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .scorecard-metric {
+            flex: 1;
+            min-width: 100px;
+        }
+        
+        .scorecard-metric-label {
+            font-size: 11px;
+            color: #90caf9;
+            margin-bottom: 5px;
+        }
+        
+        .scorecard-metric-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #ffffff;
+            font-family: 'Orbitron', sans-serif;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+        }
+        
+        .scorecard-agents {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(79, 195, 247, 0.2);
+        }
+        
+        .scorecard-agents-title {
+            font-size: 12px;
+            color: #4fc3f7;
+            margin-bottom: 8px;
+        }
+        
+        .scorecard-agent-item {
+            font-size: 11px;
+            color: #ffffff;
+            padding: 4px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        /* AI Insights */
+        .dashboard-insights {
+            background: rgba(10, 20, 40, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(79, 195, 247, 0.3);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 0 20px rgba(79, 195, 247, 0.2);
+        }
+        
+        .insights-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(79, 195, 247, 0.2);
+        }
+        
+        .insights-header h3 {
+            font-size: 20px;
+            color: #4fc3f7;
+            margin: 0;
+            font-weight: 600;
+            text-shadow: 0 0 10px rgba(79, 195, 247, 0.5);
+        }
+        
+        .insights-content {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .insight-item {
+            background: rgba(79, 195, 247, 0.05);
+            border-left: 3px solid rgba(79, 195, 247, 0.5);
+            padding: 15px 20px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .insight-item:hover {
+            background: rgba(79, 195, 247, 0.1);
+            border-left-color: #4fc3f7;
+            box-shadow: 0 0 15px rgba(79, 195, 247, 0.2);
+        }
+        
+        .insight-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #4fc3f7;
+            margin-bottom: 10px;
+        }
+        
+        .insight-content {
+            font-size: 14px;
+            color: #ffffff;
+            line-height: 1.6;
+            white-space: pre-line;
+        }
+        
+        /* Collaboration Map Canvas */
+        #collaboration-map-canvas {
+            width: 100%;
+            height: 320px;
+            border-radius: 8px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 1400px) {
+            .dashboard-modules {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            #dashboard-container {
+                padding: 15px;
+            }
+            
+            .dashboard-summary {
+                flex-direction: column;
+            }
+            
+            .dashboard-scorecards {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -843,7 +1310,100 @@
         </div>
     </div>
     
+    <!-- Dashboard Container -->
+    <div id="dashboard-container" style="display:none;">
+        <!-- Dashboard Summary -->
+        <div class="dashboard-summary">
+            <div class="summary-card">
+                <div class="summary-icon">🤖</div>
+                <div class="summary-content">
+                    <div class="summary-label">AI利用総数</div>
+                    <div class="summary-value" id="total-ai-count">0</div>
+                </div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-icon">🏢</div>
+                <div class="summary-content">
+                    <div class="summary-label">アクティブ部署数</div>
+                    <div class="summary-value" id="active-departments">0</div>
+                </div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-icon">📊</div>
+                <div class="summary-content">
+                    <div class="summary-label">平均活用率</div>
+                    <div class="summary-value" id="avg-utilization-rate">0%</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dashboard Modules (4-grid) -->
+        <div class="dashboard-modules">
+            <!-- Top Agents Module -->
+            <div class="module top-agents-module">
+                <div class="module-header">
+                    <h3>Top Agents</h3>
+                    <div class="module-controls">
+                        <select id="top-agents-sort" class="sort-dropdown">
+                            <option value="contribution">成果貢献度</option>
+                            <option value="usage">使用頻度</option>
+                            <option value="time">使用時間</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="module-content" id="top-agents-content"></div>
+            </div>
+            
+            <!-- Type Distribution Module -->
+            <div class="module type-distribution-module">
+                <div class="module-header">
+                    <h3>Agent Type Distribution</h3>
+                </div>
+                <div class="module-content">
+                    <canvas id="type-distribution-chart" width="400" height="400"></canvas>
+                    <div id="type-distribution-legend" class="chart-legend"></div>
+                </div>
+            </div>
+            
+            <!-- Collaboration Map Module -->
+            <div class="module collaboration-map-module">
+                <div class="module-header">
+                    <h3>Agent Collaboration Map</h3>
+                    <div class="module-controls">
+                        <button id="collab-map-reset" class="control-btn">リセット</button>
+                    </div>
+                </div>
+                <div class="module-content" id="collaboration-map-content">
+                    <canvas id="collaboration-map-canvas"></canvas>
+                </div>
+            </div>
+            
+            <!-- Usage Tracker Module -->
+            <div class="module usage-tracker-module">
+                <div class="module-header">
+                    <h3>利用時間・頻度トラッカー</h3>
+                </div>
+                <div class="module-content" id="usage-tracker-content"></div>
+            </div>
+        </div>
+        
+        <!-- Department Scorecards -->
+        <div class="dashboard-scorecards" id="department-scorecards"></div>
+        
+        <!-- AI Insights -->
+        <div class="dashboard-insights">
+            <div class="insights-header">
+                <h3>AI活用レポート</h3>
+                <button id="generate-report-btn" class="control-btn">レポート生成</button>
+            </div>
+            <div class="insights-content" id="insights-content"></div>
+        </div>
+    </div>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="./dashboard-data.js"></script>
+    <script src="./dashboard-charts.js"></script>
+    <script src="./dashboard.js"></script>
     <script src="./neural-galaxy.js"></script>
 </body>
 </html>
