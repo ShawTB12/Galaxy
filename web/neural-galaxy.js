@@ -723,11 +723,18 @@ function createDepartmentLabel(dept, centerPosition) {
     label.style.position = 'fixed'; // fixed位置指定で確実に表示
     
     // マウスイベントを追加
-    label.addEventListener('mouseenter', () => {
+    label.addEventListener('mouseenter', (e) => {
         const rect = label.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
         showTooltip(dept, centerX, centerY);
+    });
+    
+    label.addEventListener('mousemove', (e) => {
+        // ラベル上でマウスが動いた場合も位置を更新
+        if (hoveredDepartment === dept) {
+            updateTooltipPosition(e.clientX, e.clientY);
+        }
     });
     
     label.addEventListener('mouseleave', () => {
@@ -1241,9 +1248,13 @@ function showTooltip(dept, mouseX, mouseY) {
         showL3Layer(dept);
     }, 600);
     
-    // ツールチップを表示
+    // ツールチップを表示（一度表示してサイズを取得するため）
     tooltip.style.display = 'block';
-    updateTooltipPosition(mouseX, mouseY);
+    
+    // サイズを取得するために少し待つ
+    setTimeout(() => {
+        updateTooltipPosition(mouseX, mouseY);
+    }, 0);
 }
 
 // L2層を表示
@@ -1409,24 +1420,47 @@ function updateTooltipPosition(mouseX, mouseY) {
     const tooltip = document.getElementById('hologram-tooltip');
     if (!tooltip) return;
     
+    // 実際のツールチップのサイズを取得
+    const tooltipRect = tooltip.getBoundingClientRect();
+    const tooltipWidth = tooltipRect.width || 480; // 実際の幅、なければデフォルト値
+    const tooltipHeight = tooltipRect.height || 400; // 実際の高さ、なければデフォルト値
+    
     const offsetX = 20;
-    const offsetY = -20;
+    const offsetY = 20;
+    const margin = 20; // 画面端からのマージン
     
-    // 画面端を考慮した位置調整
-    const tooltipWidth = 400; // 推定幅
-    const tooltipHeight = 300; // 推定高さ
-    
+    // 初期位置（マウス位置の右下）
     let x = mouseX + offsetX;
     let y = mouseY + offsetY;
     
     // 右端を超える場合は左側に表示
-    if (x + tooltipWidth > window.innerWidth) {
+    if (x + tooltipWidth + margin > window.innerWidth) {
         x = mouseX - tooltipWidth - offsetX;
     }
     
+    // 左端を超える場合は右側に表示（元の位置に戻す）
+    if (x < margin) {
+        x = margin;
+    }
+    
     // 下端を超える場合は上側に表示
-    if (y + tooltipHeight > window.innerHeight) {
+    if (y + tooltipHeight + margin > window.innerHeight) {
         y = mouseY - tooltipHeight - offsetY;
+    }
+    
+    // 上端を超える場合は下側に表示（元の位置に戻す）
+    if (y < margin) {
+        y = margin;
+    }
+    
+    // 右端の最終チェック（ツールチップが画面からはみ出さないように）
+    if (x + tooltipWidth > window.innerWidth - margin) {
+        x = window.innerWidth - tooltipWidth - margin;
+    }
+    
+    // 下端の最終チェック（ツールチップが画面からはみ出さないように）
+    if (y + tooltipHeight > window.innerHeight - margin) {
+        y = window.innerHeight - tooltipHeight - margin;
     }
     
     tooltip.style.left = `${x}px`;
