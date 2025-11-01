@@ -14,8 +14,14 @@ let currentTheme = 'neural';
 let pointCloud;
 let lineMesh;
 let particleVelocity = [];
+let particleMetadata = []; // 各パーティクルのメタデータ
+let departmentNebulas = []; // 部署星雲群
+let trailHistory = []; // 各パーティクルの軌跡履歴
+let trailLines = []; // トレイル描画用の線群
+let coiqParticles = []; // 協働指数の微粒子群
 const sphereRadius = 8; // 球体の境界半径
 const maxVelocity = 0.01; // パーティクルの最大速度（ゆっくり）
+const maxTrailLength = 50; // 最大トレイル長さ
 
 // 部署データ（球面座標で配置）
 const departments = [
@@ -159,11 +165,6 @@ function init() {
     // サイドバー機能をセットアップ
     setupSidebar();
     
-    // ローディング非表示
-    setTimeout(() => {
-        document.getElementById('loading').style.display = 'none';
-    }, 1000);
-    
     // アニメーション開始
     animate();
 }
@@ -177,7 +178,7 @@ function createNeonSphereFrame() {
     const sphereMaterial = new THREE.LineBasicMaterial({
         color: 0x00d4ff,
         transparent: true,
-        opacity: 0.15,
+        opacity: 0.25,
         linewidth: 1,
         depthTest: true,
         depthWrite: false
@@ -219,8 +220,6 @@ function createNeonSphereFrame() {
     // glowSphere2.renderOrder = 2;
     // galaxyGroup.add(glowSphere2);
     
-    // 経度線、緯度線、螺旋は削除してシンプルに
-    /*
     // 経度線（縦の円）
     for (let i = 0; i < 12; i++) {
         const angle = (i / 12) * Math.PI * 2;
@@ -248,7 +247,7 @@ function createNeonSphereFrame() {
         const material = new THREE.LineBasicMaterial({
             color: 0x00d4ff,
             transparent: true,
-            opacity: 0.08,
+            opacity: 0.2,
             blending: THREE.AdditiveBlending,
             depthTest: true,
             depthWrite: false
@@ -286,7 +285,7 @@ function createNeonSphereFrame() {
         const material = new THREE.LineBasicMaterial({
             color: 0x00d4ff,
             transparent: true,
-            opacity: 0.08,
+            opacity: 0.2,
             blending: THREE.AdditiveBlending,
             depthTest: true,
             depthWrite: false
@@ -309,9 +308,9 @@ function createNeonSphereFrame() {
     }
     const spiralGeometry = new THREE.BufferGeometry().setFromPoints(spiralPoints);
     const spiralMaterial = new THREE.LineBasicMaterial({
-        color: 0x00ffff,
+        color: 0x00d4ff,
         transparent: true,
-        opacity: 0.05,
+        opacity: 0.15,
         blending: THREE.AdditiveBlending,
         depthTest: true,
         depthWrite: false
@@ -321,22 +320,7 @@ function createNeonSphereFrame() {
     spiral.renderOrder = 4;
     galaxyGroup.add(spiral);
     
-    // 外側の大きなグロー球体（アウターオーラ）
-    const outerGlowGeometry = new THREE.SphereGeometry(sphereRadius * 1.15, 32, 32);
-    const outerGlowMaterial = new THREE.MeshBasicMaterial({
-        color: 0x0066ff,
-        transparent: true,
-        opacity: 0.01,
-        side: THREE.BackSide,
-        blending: THREE.AdditiveBlending,
-        depthTest: true,
-        depthWrite: false
-    });
-    const outerGlow = new THREE.Mesh(outerGlowGeometry, outerGlowMaterial);
-    outerGlow.userData.type = 'outerGlow';
-    outerGlow.renderOrder = 5;
-    galaxyGroup.add(outerGlow);
-    */
+    // 外側の大きなグロー球体（アウターオーラ）は削除
 }
 
 // 背景の星空
@@ -382,7 +366,7 @@ function createOrganizationGalaxy() {
         totalParticles += dept.memberCount;
     });
     
-    // パーティクルの位置と色の配列を準備
+    // パーティクルの位置、色の配列を準備
     const particlePositions = new Float32Array(totalParticles * 3);
     const particleColors = new Float32Array(totalParticles * 3);
     
@@ -390,11 +374,11 @@ function createOrganizationGalaxy() {
     
     // 各部署ごとにパーティクルを生成
     departments.forEach((dept, deptIndex) => {
-        const color = new THREE.Color(dept.color);
+        const deptColor = new THREE.Color(dept.color);
         
         for (let i = 0; i < dept.memberCount; i++) {
-            // 球体内のランダムな位置に配置
-            const r = (sphereRadius - 1) * Math.random();
+            // 球体表面（外枠）に配置
+            const r = sphereRadius * (0.98 + Math.random() * 0.04); // 球体表面付近
             const theta = Math.random() * Math.PI * 2;
             const phi = Math.acos(2 * Math.random() - 1);
             
@@ -402,10 +386,10 @@ function createOrganizationGalaxy() {
             particlePositions[particleIndex * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
             particlePositions[particleIndex * 3 + 2] = r * Math.cos(phi);
             
-            // 色を設定
-            particleColors[particleIndex * 3] = color.r;
-            particleColors[particleIndex * 3 + 1] = color.g;
-            particleColors[particleIndex * 3 + 2] = color.b;
+            // ノードは白色に統一
+            particleColors[particleIndex * 3] = 1.0;
+            particleColors[particleIndex * 3 + 1] = 1.0;
+            particleColors[particleIndex * 3 + 2] = 1.0;
             
             // 速度ベクトルを初期化
             particleVelocity[particleIndex] = new THREE.Vector3();
@@ -413,6 +397,16 @@ function createOrganizationGalaxy() {
             particleVelocity[particleIndex].y = -1 + Math.random() * 2.0;
             particleVelocity[particleIndex].z = -1 + Math.random() * 2.0;
             particleVelocity[particleIndex].multiplyScalar(maxVelocity / Math.sqrt(3.0));
+            
+            // メリットデータを追加
+            const aiUseRate = 0.5 + Math.random() * 0.5; // AI活用度: 0.5～1.0
+            particleMetadata[particleIndex] = {
+                name: generateName(),
+                department: dept,
+                aiUseRate: aiUseRate,
+                valueGenerated: Math.floor(Math.random() * 500), // 生成価値: 0～500
+                coIQ: Math.floor(Math.random() * 20)       // 協働指数: 0～20
+            };
             
             particleIndex++;
         }
@@ -422,12 +416,13 @@ function createOrganizationGalaxy() {
     const particles = new THREE.BufferGeometry();
     particles.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3).setUsage(THREE.DynamicDrawUsage));
     particles.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
+    // サイズ属性は使用しない（カスタムシェーダーのエラーを回避）
     
     const pointMaterial = new THREE.PointsMaterial({
-        size: 0.08,
+        size: 0.15, // 統一サイズ
         vertexColors: true,
         transparent: true,
-        opacity: 0.85,
+        opacity: 0.9,
         blending: THREE.AdditiveBlending,
         sizeAttenuation: true,
         depthTest: true,
@@ -447,10 +442,10 @@ function createOrganizationGalaxy() {
     lineGeometry.setAttribute('position', new THREE.BufferAttribute(linePositions, 3).setUsage(THREE.DynamicDrawUsage));
     
     const lineMaterial = new THREE.LineBasicMaterial({
-        color: 0x4fc3f7,
+        color: 0xffffff,
         transparent: true,
-        opacity: 0.15,
-        linewidth: 1,
+        opacity: 0.4,
+        linewidth: 2,
         blending: THREE.AdditiveBlending,
         depthTest: true,
         depthWrite: false
@@ -464,6 +459,204 @@ function createOrganizationGalaxy() {
     console.log('Particles created:', totalParticles);
     console.log('LineMesh added to scene:', lineMesh);
     console.log('Particle positions sample:', particlePositions.slice(0, 9));
+    
+    // トレイル履歴を初期化（無効化）
+    // for (let i = 0; i < totalParticles; i++) {
+    //     trailHistory[i] = [];
+    // }
+    
+    // 部署星雲（Nebula）を生成
+    createDepartmentNebulas();
+    
+    // トレイルシステムを初期化（一旦無効化）
+    // createTrailSystem(totalParticles);
+    
+    // CoIQ微粒子システムを初期化（一旦無効化）
+    // createCoIQParticleSystem(totalParticles);
+}
+
+// トレイルシステムの初期化
+function createTrailSystem(totalParticles) {
+    // 各パーティクルのトレイル用の線を作成
+    for (let i = 0; i < totalParticles; i++) {
+        const trailGeometry = new THREE.BufferGeometry();
+        const trailPositions = new Float32Array(maxTrailLength * 3);
+        trailGeometry.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3).setUsage(THREE.DynamicDrawUsage));
+        
+        const trailMaterial = new THREE.LineBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.3,
+            blending: THREE.AdditiveBlending,
+            depthTest: true,
+            depthWrite: false
+        });
+        
+        const trailLine = new THREE.Line(trailGeometry, trailMaterial);
+        trailLine.renderOrder = 500; // パーティクルより後ろ、星雲より前
+        trailLine.visible = false; // 初期は非表示
+        galaxyGroup.add(trailLine);
+        trailLines.push(trailLine);
+    }
+    
+    console.log('Trail system created:', trailLines.length);
+}
+
+// CoIQ微粒子システムの初期化
+function createCoIQParticleSystem(totalParticles) {
+    // 各パーティクルの周囲に協働指数に応じた微粒子を配置
+    for (let i = 0; i < totalParticles; i++) {
+        const metadata = particleMetadata[i];
+        const coiqCount = Math.floor(metadata.coIQ * 2); // CoIQ × 2個の微粒子
+        
+        if (coiqCount > 0) {
+            const positions = [];
+            const colors = [];
+            
+            for (let j = 0; j < coiqCount; j++) {
+                // ランダムな角度と距離
+                const angle1 = Math.random() * Math.PI * 2;
+                const angle2 = Math.random() * Math.PI * 2;
+                const radius = 0.15 + Math.random() * 0.1;
+                
+                const x = Math.cos(angle1) * Math.sin(angle2) * radius;
+                const y = Math.sin(angle1) * Math.sin(angle2) * radius;
+                const z = Math.cos(angle2) * radius;
+                
+                positions.push(x, y, z);
+                colors.push(1.0, 1.0, 1.0); // 白色
+            }
+            
+            const coiqGeometry = new THREE.BufferGeometry();
+            coiqGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            coiqGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            
+            const coiqMaterial = new THREE.PointsMaterial({
+                size: 0.03,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.4,
+                blending: THREE.AdditiveBlending,
+                sizeAttenuation: true,
+                depthTest: true,
+                depthWrite: false
+            });
+            
+            const coiqCloud = new THREE.Points(coiqGeometry, coiqMaterial);
+            coiqCloud.userData = { particleIndex: i };
+            coiqCloud.renderOrder = 800; // パーティクルの後ろ
+            galaxyGroup.add(coiqCloud);
+            coiqParticles.push(coiqCloud);
+        } else {
+            coiqParticles.push(null); // CoIQがない場合はnull
+        }
+    }
+    
+    console.log('CoIQ particle system created');
+}
+
+// 部署星雲（霧状パーティクル）を生成
+function createDepartmentNebulas() {
+    let startIndex = 0;
+    
+    departments.forEach((dept, deptIndex) => {
+        const endIndex = startIndex + dept.memberCount;
+        const memberPositions = [];
+        
+        // 部署メンバーの位置を収集
+        for (let i = startIndex; i < endIndex; i++) {
+            const pos = new THREE.Vector3(
+                particleMetadata[i].position ? particleMetadata[i].position.x : 0,
+                particleMetadata[i].position ? particleMetadata[i].position.y : 0,
+                particleMetadata[i].position ? particleMetadata[i].position.z : 0
+            );
+            memberPositions.push(pos);
+        }
+        
+        // 重心を計算（球体表面上）
+        const center = calculateCentroid(memberPositions, startIndex, endIndex);
+        
+        // 星雲パーティクルを生成
+        const nebulaParticleCount = 300; // 霧状パーティクルの数
+        const nebulaPositions = [];
+        const nebulaColors = [];
+        const color = new THREE.Color(dept.color);
+        
+        for (let i = 0; i < nebulaParticleCount; i++) {
+            // 重心周辺にランダム配置
+            const spread = 1.5; // 広がり範囲
+            const angle1 = Math.random() * Math.PI * 2;
+            const angle2 = Math.random() * Math.PI * 2;
+            const distance = Math.random() * spread;
+            
+            const offset = new THREE.Vector3(
+                Math.cos(angle1) * Math.sin(angle2) * distance,
+                Math.sin(angle1) * Math.sin(angle2) * distance,
+                Math.cos(angle2) * distance
+            );
+            
+            const pos = center.clone().add(offset);
+            // 球体表面に投影
+            pos.normalize().multiplyScalar(sphereRadius * (0.96 + Math.random() * 0.06));
+            
+            nebulaPositions.push(pos.x, pos.y, pos.z);
+            nebulaColors.push(color.r, color.g, color.b);
+        }
+        
+        // 星雲のジオメトリとマテリアルを作成
+        const nebulaGeometry = new THREE.BufferGeometry();
+        nebulaGeometry.setAttribute('position', new THREE.Float32BufferAttribute(nebulaPositions, 3));
+        nebulaGeometry.setAttribute('color', new THREE.Float32BufferAttribute(nebulaColors, 3));
+        
+        const nebulaMaterial = new THREE.PointsMaterial({
+            size: 0.25,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.12,
+            blending: THREE.AdditiveBlending,
+            sizeAttenuation: true,
+            depthTest: true,
+            depthWrite: false
+        });
+        
+        const nebula = new THREE.Points(nebulaGeometry, nebulaMaterial);
+        nebula.userData = {
+            type: 'nebula',
+            department: dept,
+            pulseSpeed: dept.avgRate / 50 // 平均スコアで脈動速度を決定
+        };
+        nebula.renderOrder = 100; // パーティクルより後ろに配置
+        
+        galaxyGroup.add(nebula);
+        departmentNebulas.push(nebula);
+        
+        startIndex = endIndex;
+    });
+    
+    console.log('Department nebulas created:', departmentNebulas.length);
+}
+
+// 部署メンバーの重心を計算（球体表面上）
+function calculateCentroid(memberPositions, startIndex, endIndex) {
+    const center = new THREE.Vector3(0, 0, 0);
+    
+    // パーティクルの位置から直接計算
+    if (pointCloud && pointCloud.geometry) {
+        const positions = pointCloud.geometry.attributes.position.array;
+        for (let i = startIndex; i < endIndex; i++) {
+            center.x += positions[i * 3];
+            center.y += positions[i * 3 + 1];
+            center.z += positions[i * 3 + 2];
+        }
+        center.divideScalar(endIndex - startIndex);
+    }
+    
+    // 球体表面に投影
+    if (center.length() > 0) {
+        center.normalize().multiplyScalar(sphereRadius);
+    }
+    
+    return center;
 }
 
 // シナプスパーティクルの更新処理
@@ -473,27 +666,30 @@ function updateSynapseParticles() {
     const particlePositions = pointCloud.geometry.attributes.position.array;
     const linePositions = lineMesh.geometry.attributes.position.array;
     const particleNum = particlePositions.length / 3;
-    const rHalf = sphereRadius / 2.0;
-    const connectionDistance = 2.5; // 接続する最大距離（短めに）
+    const connectionDistance = 2.0; // 接続する最大距離
     
     let vertexpos = 0;
     
-    // パーティクルの位置を更新
+    // パーティクルの位置を更新（球体表面に沿って移動）
     for (let i = 0; i < particleNum; i++) {
         // 速度を位置に加算
         particlePositions[i * 3] += particleVelocity[i].x;
         particlePositions[i * 3 + 1] += particleVelocity[i].y;
         particlePositions[i * 3 + 2] += particleVelocity[i].z;
         
-        // 境界での反射処理
-        if (particlePositions[i * 3] < -rHalf || particlePositions[i * 3] > rHalf) {
-            particleVelocity[i].x *= -1;
-        }
-        if (particlePositions[i * 3 + 1] < -rHalf || particlePositions[i * 3 + 1] > rHalf) {
-            particleVelocity[i].y *= -1;
-        }
-        if (particlePositions[i * 3 + 2] < -rHalf || particlePositions[i * 3 + 2] > rHalf) {
-            particleVelocity[i].z *= -1;
+        // 現在の位置ベクトルの長さを計算
+        const x = particlePositions[i * 3];
+        const y = particlePositions[i * 3 + 1];
+        const z = particlePositions[i * 3 + 2];
+        const currentRadius = Math.sqrt(x * x + y * y + z * z);
+        
+        // 球体表面に正規化（半径をsphereRadiusに保つ）
+        if (currentRadius > 0) {
+            const targetRadius = sphereRadius;
+            const scale = targetRadius / currentRadius;
+            particlePositions[i * 3] *= scale;
+            particlePositions[i * 3 + 1] *= scale;
+            particlePositions[i * 3 + 2] *= scale;
         }
     }
     
@@ -528,6 +724,58 @@ function updateSynapseParticles() {
     // 更新を通知するフラグ
     pointCloud.geometry.attributes.position.needsUpdate = true;
     lineMesh.geometry.attributes.position.needsUpdate = true;
+    
+    // トレイルを更新（無効化）
+    // updateTrails(particlePositions, particleNum);
+}
+
+// トレイルの更新処理
+function updateTrails(particlePositions, particleNum) {
+    for (let i = 0; i < particleNum; i++) {
+        // 現在の位置を取得
+        const currentPos = new THREE.Vector3(
+            particlePositions[i * 3],
+            particlePositions[i * 3 + 1],
+            particlePositions[i * 3 + 2]
+        );
+        
+        // 履歴に追加
+        trailHistory[i].unshift(currentPos.clone());
+        
+        // 生成価値に応じてトレイル長さを決定
+        const metadata = particleMetadata[i];
+        const trailLength = Math.floor((metadata.valueGenerated / 500) * maxTrailLength);
+        
+        // 長さを制限
+        if (trailHistory[i].length > trailLength) {
+            trailHistory[i].length = trailLength;
+        }
+        
+        // トレイルラインを更新
+        if (trailLines[i] && trailHistory[i].length > 1) {
+            const trailPositions = trailLines[i].geometry.attributes.position.array;
+            
+            for (let j = 0; j < maxTrailLength; j++) {
+                if (j < trailHistory[i].length) {
+                    const pos = trailHistory[i][j];
+                    trailPositions[j * 3] = pos.x;
+                    trailPositions[j * 3 + 1] = pos.y;
+                    trailPositions[j * 3 + 2] = pos.z;
+                } else {
+                    // 履歴がない部分は原点に
+                    trailPositions[j * 3] = currentPos.x;
+                    trailPositions[j * 3 + 1] = currentPos.y;
+                    trailPositions[j * 3 + 2] = currentPos.z;
+                }
+            }
+            
+            trailLines[i].geometry.attributes.position.needsUpdate = true;
+            trailLines[i].visible = trailHistory[i].length > 1;
+            
+            // 透明度をグラデーションで調整
+            trailLines[i].material.opacity = 0.2 + (metadata.valueGenerated / 500) * 0.3;
+        }
+    }
 }
 
 // 名前生成（ダミー）
@@ -553,18 +801,18 @@ function animate() {
     galaxyGroup.children.forEach(child => {
         if (child.userData.type === 'sphereFrame') {
             // ワイヤーフレームの明滅（穏やか）
-            child.material.opacity = 0.1 + Math.sin(time * 0.5) * 0.03;
+            child.material.opacity = 0.2 + Math.sin(time * 0.5) * 0.08;
         } else if (child.userData.type === 'glowSphere') {
             // グロー球体のパルス（穏やか）
             const pulse = Math.sin(time * 0.8) * 0.015 + 1;
             child.scale.setScalar(pulse);
         } else if (child.userData.type === 'gridLine') {
             // グリッド線の明滅（穏やか）
-            child.material.opacity = 0.08 + Math.sin(time * 0.6 + child.id) * 0.02;
+            child.material.opacity = 0.15 + Math.sin(time * 0.6 + child.id) * 0.06;
         } else if (child.userData.type === 'spiral') {
             // 螺旋の回転（ゆっくり）
             child.rotation.y += 0.0005;
-            child.material.opacity = 0.05 + Math.sin(time * 0.7) * 0.02;
+            child.material.opacity = 0.12 + Math.sin(time * 0.7) * 0.05;
         } else if (child.userData.type === 'outerGlow') {
             // 外側グローのパルス（穏やか）
             const pulse = Math.sin(time * 0.5) * 0.02 + 1;
@@ -572,14 +820,32 @@ function animate() {
         }
     });
     
-    // パーティクルクラウドのパルス効果（一旦無効化）
-    // if (pointCloud) {
-    //     pointCloud.material.opacity = 0.8 + Math.sin(time * 2) * 0.15;
-    // }
+    // 部署星雲の脈動アニメーション
+    departmentNebulas.forEach((nebula, index) => {
+        if (nebula.userData.pulseSpeed) {
+            const pulse = Math.sin(time * nebula.userData.pulseSpeed) * 0.05 + 1;
+            nebula.material.opacity = 0.1 + Math.sin(time * nebula.userData.pulseSpeed) * 0.04;
+            nebula.scale.setScalar(0.98 + pulse * 0.02);
+        }
+    });
     
-    // 線のパルス効果（一旦無効化）
-    // if (lineMesh) {
-    //     lineMesh.material.opacity = 0.15 + Math.sin(time * 1.5) * 0.1;
+    // CoIQ微粒子をパーティクルに追従させる（無効化）
+    // if (pointCloud && pointCloud.geometry) {
+    //     const positions = pointCloud.geometry.attributes.position.array;
+    //     coiqParticles.forEach((coiqCloud, index) => {
+    //         if (coiqCloud) {
+    //             const particlePos = new THREE.Vector3(
+    //                 positions[index * 3],
+    //                 positions[index * 3 + 1],
+    //                 positions[index * 3 + 2]
+    //             );
+    //             coiqCloud.position.copy(particlePos);
+    //             
+    //             // 微粒子をゆっくり回転
+    //             coiqCloud.rotation.y += 0.01;
+    //             coiqCloud.rotation.x += 0.005;
+    //         }
+    //     });
     // }
     
     renderer.render(scene, camera);
@@ -661,20 +927,17 @@ function setupSidebar() {
     // トグルボタンのクリック
     toggleBtn.addEventListener('click', () => {
         isOpen = !isOpen;
-        const clusterPanel = document.getElementById('cluster-panel');
         
         if (isOpen) {
             sidebar.classList.remove('collapsed');
             toggleBtn.classList.add('active');
             canvasContainer.classList.remove('collapsed');
             legend.classList.add('shifted');
-            clusterPanel.classList.remove('collapsed');
         } else {
             sidebar.classList.add('collapsed');
             toggleBtn.classList.remove('active');
             canvasContainer.classList.add('collapsed');
             legend.classList.remove('shifted');
-            clusterPanel.classList.add('collapsed');
         }
         
         // カメラのアスペクト比を調整
@@ -705,8 +968,6 @@ function handlePageChange(page) {
     switch(page) {
         case 'home':
             // ホーム表示（現在の3D表示）
-            document.getElementById('cluster-panel').style.display = 'none';
-            document.getElementById('agent-detail').style.display = 'none';
             break;
             
         case 'dashboard':
@@ -741,141 +1002,36 @@ function onClick(event) {
     // 必要に応じて、固定表示などの機能を追加可能
 }
 
-// ホバー効果を更新（ツールチップとパネル）
+// ホバー効果を更新（無効化）
 function updateHoverEffects(event) {
-    raycaster.setFromCamera(mouse, camera);
-    
-    // ポイントクラウドとの交差判定
-    if (pointCloud) {
-        raycaster.params.Points.threshold = 0.5; // パーティクル検出の閾値
-        const intersects = raycaster.intersectObject(pointCloud);
-        
-        if (intersects.length > 0) {
-            const intersect = intersects[0];
-            const index = intersect.index;
-            
-            // パーティクルのインデックスから部署情報を取得
-            const particlePositions = pointCloud.geometry.attributes.position.array;
-            const particleNum = particlePositions.length / 3;
-            
-            // パーティクルインデックスから部署を特定
-            let currentIndex = 0;
-            let deptInfo = null;
-            
-            for (let d = 0; d < departments.length; d++) {
-                if (index >= currentIndex && index < currentIndex + departments[d].memberCount) {
-                    deptInfo = departments[d];
-                    break;
-                }
-                currentIndex += departments[d].memberCount;
-            }
-            
-            if (deptInfo) {
-                // ツールチップ表示
-                const tooltip = document.getElementById('tooltip');
-                tooltip.style.display = 'block';
-                tooltip.style.left = event.clientX + 15 + 'px';
-                tooltip.style.top = event.clientY + 15 + 'px';
-                tooltip.textContent = deptInfo.name + ' - ' + generateName();
-            }
-            return;
-        }
-    }
-    
-    // 何も見つからない場合はすべて非表示
-    hideTooltip();
-    hideAllPanels();
+    // ホバー効果を無効化
+    return;
 }
 
-// ツールチップを非表示にする
+// ツールチップを非表示にする（無効化）
 function hideTooltip() {
-    const tooltip = document.getElementById('tooltip');
-    if (tooltip) {
-        tooltip.style.display = 'none';
-    }
+    // 何もしない
 }
 
-// クラスタパネル表示
+// クラスタパネル表示（無効化）
 function showClusterPanel(dept, event) {
-    const panel = document.getElementById('cluster-panel');
-    const sidebar = document.getElementById('sidebar');
-    const isSidebarOpen = !sidebar.classList.contains('collapsed');
-    
-    // サイドバーの状態に応じて位置を調整
-    if (isSidebarOpen) {
-        panel.classList.remove('collapsed');
-    } else {
-        panel.classList.add('collapsed');
-    }
-    
-    panel.style.display = 'block';
-    
-    document.getElementById('cluster-name').textContent = dept.name;
-    document.getElementById('cluster-rate').textContent = dept.avgRate + '%';
-    document.getElementById('cluster-members').textContent = dept.memberCount + '人';
-    document.getElementById('cluster-project').textContent = dept.topProject;
-    
-    // トップ3のエージェントを表示（ダミーデータ）
-    const topNames = [
-        { name: generateName(), rate: 95 + Math.floor(Math.random() * 5) },
-        { name: generateName(), rate: 90 + Math.floor(Math.random() * 5) },
-        { name: generateName(), rate: 85 + Math.floor(Math.random() * 5) }
-    ];
-    
-    const cards = document.querySelectorAll('.agent-card');
-    topNames.forEach((data, i) => {
-        if (cards[i]) {
-            cards[i].querySelector('.name').textContent = data.name;
-            cards[i].querySelector('.score').textContent = data.rate + '%';
-        }
-    });
+    // パネル表示を無効化
+    return;
 }
 
-// エージェント詳細表示
+// エージェント詳細表示（無効化）
 function showAgentDetail(agent, event) {
-    const detail = document.getElementById('agent-detail');
-    
-    // カーソルの横に配置（画面外に出ないように調整）
-    const offsetX = 20;
-    const offsetY = -50;
-    let left = event.clientX + offsetX;
-    let top = event.clientY + offsetY;
-    
-    // 画面の右端を超えないように調整
-    if (left + 350 > window.innerWidth) {
-        left = event.clientX - 370; // 左側に表示
-    }
-    
-    // 画面の下端を超えないように調整
-    if (top + 300 > window.innerHeight) {
-        top = window.innerHeight - 320;
-    }
-    
-    // 画面の上端を超えないように調整
-    if (top < 10) {
-        top = 10;
-    }
-    
-    detail.style.left = left + 'px';
-    detail.style.top = top + 'px';
-    detail.style.display = 'block';
-    
-    document.getElementById('agent-name').textContent = agent.userData.name;
-    document.getElementById('agent-dept').textContent = agent.userData.department.name;
-    document.getElementById('agent-rate').textContent = agent.userData.rate + '%';
-    document.getElementById('agent-output').textContent = agent.userData.output + '件';
-    document.getElementById('agent-collab').textContent = agent.userData.collaborations + '部署';
-    document.getElementById('agent-activity').textContent = '提案書生成、分析レポート';
+    // パネル表示を無効化
+    return;
 }
 
-// パネルを閉じる
+// パネルを閉じる（無効化）
 function closeAgentDetail() {
-    document.getElementById('agent-detail').style.display = 'none';
+    // 何もしない
 }
 
 function hideAllPanels() {
-    document.getElementById('cluster-panel').style.display = 'none';
-    document.getElementById('agent-detail').style.display = 'none';
+    // 何もしない
 }
 
 // 初期化実行
