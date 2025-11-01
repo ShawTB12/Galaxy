@@ -26,8 +26,8 @@ const maxTrailLength = 50; // 最大トレイル長さ
 // 部署データ（球面座標で配置）
 const departments = [
     {
-        id: 'sales',
-        name: '営業部門',
+        id: 'consumer',
+        name: 'コンシューマー統括',
         color: 0x2196F3, // Blue
         theta: 0,
         phi: Math.PI / 3,
@@ -36,8 +36,8 @@ const departments = [
         topProject: '顧客分析AI'
     },
     {
-        id: 'tech',
-        name: '技術部門',
+        id: 'corporate',
+        name: '法人統括',
         color: 0xFFC107, // Yellow
         theta: (Math.PI * 2) / 5,
         phi: Math.PI / 2.5,
@@ -46,8 +46,8 @@ const departments = [
         topProject: '自動テストシステム'
     },
     {
-        id: 'marketing',
-        name: 'マーケティング',
+        id: 'technology',
+        name: 'テクノロジーユニット統括',
         color: 0x4CAF50, // Green
         theta: (Math.PI * 2 * 2) / 5,
         phi: Math.PI / 2,
@@ -56,8 +56,8 @@ const departments = [
         topProject: 'コンテンツ生成AI'
     },
     {
-        id: 'hr',
-        name: '人事部門',
+        id: 'it',
+        name: 'IT統括',
         color: 0xE91E63, // Pink
         theta: (Math.PI * 2 * 3) / 5,
         phi: Math.PI / 1.8,
@@ -66,8 +66,8 @@ const departments = [
         topProject: '採用支援AI'
     },
     {
-        id: 'strategy',
-        name: '経営企画',
+        id: 'finance',
+        name: '財務統括',
         color: 0x9C27B0, // Purple
         theta: (Math.PI * 2 * 4) / 5,
         phi: Math.PI / 3,
@@ -376,27 +376,52 @@ function createOrganizationGalaxy() {
     departments.forEach((dept, deptIndex) => {
         const deptColor = new THREE.Color(dept.color);
         
+        // 部署の中心位置を計算（霧の中心と同じ位置）
+        const centerX = sphereRadius * Math.sin(dept.phi) * Math.cos(dept.theta);
+        const centerY = sphereRadius * Math.sin(dept.phi) * Math.sin(dept.theta);
+        const centerZ = sphereRadius * Math.cos(dept.phi);
+        const center = new THREE.Vector3(centerX, centerY, centerZ);
+        
         for (let i = 0; i < dept.memberCount; i++) {
-            // 球体表面（外枠）に配置
-            const r = sphereRadius * (0.98 + Math.random() * 0.04); // 球体表面付近
-            const theta = Math.random() * Math.PI * 2;
-            const phi = Math.acos(2 * Math.random() - 1);
+            // 中心から球体表面に向かって展開するように配置
+            // 中心に近い位置からスタート（ランダムな半径）
+            const innerRadius = sphereRadius * (0.7 + Math.random() * 0.25); // 中心に近い位置
+            const outerRadius = sphereRadius * (0.95 + Math.random() * 0.05); // 最終的な位置（球体表面）
             
-            particlePositions[particleIndex * 3] = r * Math.sin(phi) * Math.cos(theta);
-            particlePositions[particleIndex * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-            particlePositions[particleIndex * 3 + 2] = r * Math.cos(phi);
+            // 中心からの方向をランダムに決定（均等分布）
+            const angle1 = Math.random() * Math.PI * 2;
+            const angle2 = Math.acos(2 * Math.random() - 1); // 球面分布
+            
+            // 中心からの方向ベクトル
+            const direction = new THREE.Vector3(
+                Math.sin(angle2) * Math.cos(angle1),
+                Math.sin(angle2) * Math.sin(angle1),
+                Math.cos(angle2)
+            );
+            
+            // 中心位置 + 方向 * 半径で初期位置を決定
+            const startRadius = innerRadius + (outerRadius - innerRadius) * Math.random();
+            const pos = center.clone().add(direction.clone().multiplyScalar(startRadius));
+            
+            particlePositions[particleIndex * 3] = pos.x;
+            particlePositions[particleIndex * 3 + 1] = pos.y;
+            particlePositions[particleIndex * 3 + 2] = pos.z;
             
             // ノードは白色に統一
             particleColors[particleIndex * 3] = 1.0;
             particleColors[particleIndex * 3 + 1] = 1.0;
             particleColors[particleIndex * 3 + 2] = 1.0;
             
-            // 速度ベクトルを初期化
-            particleVelocity[particleIndex] = new THREE.Vector3();
-            particleVelocity[particleIndex].x = -1 + Math.random() * 2.0;
-            particleVelocity[particleIndex].y = -1 + Math.random() * 2.0;
-            particleVelocity[particleIndex].z = -1 + Math.random() * 2.0;
-            particleVelocity[particleIndex].multiplyScalar(maxVelocity / Math.sqrt(3.0));
+            // 速度ベクトルを初期化（中心から外側に向かう方向にバイアス）
+            const outwardDirection = pos.clone().sub(center).normalize();
+            const randomOffset = new THREE.Vector3(
+                (Math.random() - 0.5) * 0.3,
+                (Math.random() - 0.5) * 0.3,
+                (Math.random() - 0.5) * 0.3
+            );
+            const velocityDirection = outwardDirection.clone().add(randomOffset).normalize();
+            
+            particleVelocity[particleIndex] = velocityDirection.clone().multiplyScalar(maxVelocity);
             
             // メリットデータを追加
             const aiUseRate = 0.5 + Math.random() * 0.5; // AI活用度: 0.5～1.0
@@ -557,34 +582,22 @@ function createCoIQParticleSystem(totalParticles) {
 
 // 部署星雲（霧状パーティクル）を生成
 function createDepartmentNebulas() {
-    let startIndex = 0;
-    
     departments.forEach((dept, deptIndex) => {
-        const endIndex = startIndex + dept.memberCount;
-        const memberPositions = [];
-        
-        // 部署メンバーの位置を収集
-        for (let i = startIndex; i < endIndex; i++) {
-            const pos = new THREE.Vector3(
-                particleMetadata[i].position ? particleMetadata[i].position.x : 0,
-                particleMetadata[i].position ? particleMetadata[i].position.y : 0,
-                particleMetadata[i].position ? particleMetadata[i].position.z : 0
-            );
-            memberPositions.push(pos);
-        }
-        
-        // 重心を計算（球体表面上）
-        const center = calculateCentroid(memberPositions, startIndex, endIndex);
+        // 部署の定義されたtheta/phi座標から均一な中心位置を計算
+        const center = new THREE.Vector3();
+        center.x = sphereRadius * Math.sin(dept.phi) * Math.cos(dept.theta);
+        center.y = sphereRadius * Math.sin(dept.phi) * Math.sin(dept.theta);
+        center.z = sphereRadius * Math.cos(dept.phi);
         
         // 星雲パーティクルを生成
-        const nebulaParticleCount = 300; // 霧状パーティクルの数
+        const nebulaParticleCount = 1200; // 霧状パーティクルの数（大幅に増加）
         const nebulaPositions = [];
         const nebulaColors = [];
         const color = new THREE.Color(dept.color);
         
         for (let i = 0; i < nebulaParticleCount; i++) {
-            // 重心周辺にランダム配置
-            const spread = 1.5; // 広がり範囲
+            // 中心周辺にランダム配置（範囲を大幅に広く）
+            const spread = 10.0; // 広がり範囲を大幅に拡大（7.0 → 10.0）
             const angle1 = Math.random() * Math.PI * 2;
             const angle2 = Math.random() * Math.PI * 2;
             const distance = Math.random() * spread;
@@ -596,8 +609,8 @@ function createDepartmentNebulas() {
             );
             
             const pos = center.clone().add(offset);
-            // 球体表面に投影
-            pos.normalize().multiplyScalar(sphereRadius * (0.96 + Math.random() * 0.06));
+            // 球体表面に投影（大幅に広い範囲）
+            pos.normalize().multiplyScalar(sphereRadius * (0.85 + Math.random() * 0.18));
             
             nebulaPositions.push(pos.x, pos.y, pos.z);
             nebulaColors.push(color.r, color.g, color.b);
@@ -609,10 +622,10 @@ function createDepartmentNebulas() {
         nebulaGeometry.setAttribute('color', new THREE.Float32BufferAttribute(nebulaColors, 3));
         
         const nebulaMaterial = new THREE.PointsMaterial({
-            size: 0.25,
+            size: 0.3, // サイズを少し大きく
             vertexColors: true,
             transparent: true,
-            opacity: 0.12,
+            opacity: 0.15, // 透明度を上げて見やすく
             blending: THREE.AdditiveBlending,
             sizeAttenuation: true,
             depthTest: true,
@@ -629,8 +642,6 @@ function createDepartmentNebulas() {
         
         galaxyGroup.add(nebula);
         departmentNebulas.push(nebula);
-        
-        startIndex = endIndex;
     });
     
     console.log('Department nebulas created:', departmentNebulas.length);
