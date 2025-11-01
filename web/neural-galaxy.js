@@ -34,7 +34,18 @@ const departments = [
         phi: Math.PI / 3,
         memberCount: 45,
         avgRate: 92,
-        topProject: '顧客分析AI'
+        topProject: '顧客分析AI',
+        // AI活用詳細データ
+        aiUsageRate: 85,
+        activeAgents: 128,
+        valueIndex: 18,
+        coIQ: 0.72,
+        diversityScore: 0.65,
+        summaryParams: {
+            area: '顧客分析',
+            improvement: 22,
+            metric: '分析時間'
+        }
     },
     {
         id: 'corporate',
@@ -44,7 +55,18 @@ const departments = [
         phi: Math.PI / 2.5,
         memberCount: 68,
         avgRate: 88,
-        topProject: '自動テストシステム'
+        topProject: '自動テストシステム',
+        // AI活用詳細データ
+        aiUsageRate: 82,
+        activeAgents: 145,
+        valueIndex: 23,
+        coIQ: 0.74,
+        diversityScore: 0.68,
+        summaryParams: {
+            area: '営業提案',
+            improvement: 27,
+            metric: '提案時間'
+        }
     },
     {
         id: 'technology',
@@ -54,7 +76,18 @@ const departments = [
         phi: Math.PI / 2,
         memberCount: 32,
         avgRate: 85,
-        topProject: 'コンテンツ生成AI'
+        topProject: 'コンテンツ生成AI',
+        // AI活用詳細データ
+        aiUsageRate: 91,
+        activeAgents: 98,
+        valueIndex: 31,
+        coIQ: 0.81,
+        diversityScore: 0.79,
+        summaryParams: {
+            area: 'コンテンツ生成',
+            improvement: 35,
+            metric: '制作時間'
+        }
     },
     {
         id: 'it',
@@ -64,7 +97,18 @@ const departments = [
         phi: Math.PI / 1.8,
         memberCount: 28,
         avgRate: 78,
-        topProject: '採用支援AI'
+        topProject: '採用支援AI',
+        // AI活用詳細データ
+        aiUsageRate: 76,
+        activeAgents: 87,
+        valueIndex: 15,
+        coIQ: 0.68,
+        diversityScore: 0.61,
+        summaryParams: {
+            area: '採用プロセス',
+            improvement: 19,
+            metric: '選考時間'
+        }
     },
     {
         id: 'finance',
@@ -74,7 +118,18 @@ const departments = [
         phi: Math.PI / 3,
         memberCount: 24,
         avgRate: 95,
-        topProject: '経営分析ダッシュボード'
+        topProject: '経営分析ダッシュボード',
+        // AI活用詳細データ
+        aiUsageRate: 94,
+        activeAgents: 112,
+        valueIndex: 28,
+        coIQ: 0.79,
+        diversityScore: 0.73,
+        summaryParams: {
+            area: '経営分析',
+            improvement: 31,
+            metric: 'レポート作成時間'
+        }
     }
 ];
 
@@ -666,6 +721,19 @@ function createDepartmentLabel(dept, centerPosition) {
     label.className = `hologram-label ${dept.id}`;
     label.textContent = dept.name;
     label.style.position = 'fixed'; // fixed位置指定で確実に表示
+    
+    // マウスイベントを追加
+    label.addEventListener('mouseenter', () => {
+        const rect = label.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        showTooltip(dept, centerX, centerY);
+    });
+    
+    label.addEventListener('mouseleave', () => {
+        hideTooltip();
+    });
+    
     document.body.appendChild(label);
     
     console.log('Label created for:', dept.name, 'at position:', centerPosition);
@@ -1085,15 +1153,318 @@ function onClick(event) {
     // 必要に応じて、固定表示などの機能を追加可能
 }
 
-// ホバー効果を更新（無効化）
+// ホバー中の部署を追跡
+let hoveredDepartment = null;
+let tooltipTimer = null;
+let l2Timer = null;
+let l3Timer = null;
+
+// ホバー効果を更新
 function updateHoverEffects(event) {
-    // ホバー効果を無効化
-    return;
+    // マウス位置を正規化座標に変換
+    const canvasContainer = document.getElementById('canvas-container');
+    if (!canvasContainer) return;
+    
+    const rect = canvasContainer.getBoundingClientRect();
+    const mouseX = event.clientX;
+    const mouseY = event.clientY;
+    
+    // 各部署ラベルの位置をチェック
+    let foundDept = null;
+    departmentLabels.forEach(labelData => {
+        const { element, department } = labelData;
+        if (element.style.display === 'none') return;
+        
+        const labelRect = element.getBoundingClientRect();
+        // ラベルの領域内かチェック（マージンを追加）
+        const margin = 30;
+        if (mouseX >= labelRect.left - margin &&
+            mouseX <= labelRect.right + margin &&
+            mouseY >= labelRect.top - margin &&
+            mouseY <= labelRect.bottom + margin) {
+            foundDept = department;
+        }
+    });
+    
+    // ホバー中の部署が変わった場合
+    if (foundDept !== hoveredDepartment) {
+        // 前のツールチップを非表示
+        if (hoveredDepartment) {
+            hideTooltip();
+        }
+        
+        hoveredDepartment = foundDept;
+        
+        // 新しい部署をホバーしている場合
+        if (hoveredDepartment) {
+            showTooltip(hoveredDepartment, mouseX, mouseY);
+        }
+    } else if (hoveredDepartment) {
+        // 同じ部署をホバーし続けている場合、位置を更新
+        updateTooltipPosition(mouseX, mouseY);
+    }
 }
 
-// ツールチップを非表示にする（無効化）
+// ツールチップを表示
+function showTooltip(dept, mouseX, mouseY) {
+    const tooltip = document.getElementById('hologram-tooltip');
+    if (!tooltip) return;
+    
+    // タイマーをクリア
+    clearAllTimers();
+    
+    // 部署の色に合わせてクラスを設定
+    tooltip.className = `hologram-tooltip ${dept.id}`;
+    
+    // L1層のデータを設定（即時表示）
+    const deptNameEl = tooltip.querySelector('.dept-name');
+    const aiUsageRateEl = tooltip.querySelector('.ai-usage-rate');
+    const activeAgentsEl = tooltip.querySelector('.active-agents');
+    
+    if (deptNameEl) deptNameEl.textContent = dept.name;
+    if (aiUsageRateEl) aiUsageRateEl.textContent = `${dept.aiUsageRate}%`;
+    if (activeAgentsEl) activeAgentsEl.textContent = dept.activeAgents;
+    
+    // L1層を即座に表示
+    const l1Layer = tooltip.querySelector('.l1-layer');
+    if (l1Layer) {
+        l1Layer.classList.add('visible');
+    }
+    
+    // L2層のタイマー（0.3秒後）
+    l2Timer = setTimeout(() => {
+        showL2Layer(dept);
+    }, 300);
+    
+    // L3層のタイマー（0.6秒後）
+    l3Timer = setTimeout(() => {
+        showL3Layer(dept);
+    }, 600);
+    
+    // ツールチップを表示
+    tooltip.style.display = 'block';
+    updateTooltipPosition(mouseX, mouseY);
+}
+
+// L2層を表示
+function showL2Layer(dept) {
+    const tooltip = document.getElementById('hologram-tooltip');
+    if (!tooltip) return;
+    
+    const l2Layer = tooltip.querySelector('.l2-layer');
+    if (l2Layer) {
+        l2Layer.classList.add('visible');
+        
+        // リングメーターの値を設定
+        const valueIndexRing = tooltip.querySelector('.value-index-ring');
+        const valueIndexValue = tooltip.querySelector('.value-index-value');
+        const coiqRing = tooltip.querySelector('.coiq-ring');
+        const coiqValue = tooltip.querySelector('.coiq-value');
+        const diversityRing = tooltip.querySelector('.diversity-ring');
+        const diversityValue = tooltip.querySelector('.diversity-value');
+        
+        // Value Index（0-100%の範囲に正規化、最大40とする）
+        const valueIndexPercent = Math.min((dept.valueIndex / 40) * 100, 100);
+        const valueIndexOffset = 251.2 * (1 - valueIndexPercent / 100);
+        if (valueIndexRing) {
+            valueIndexRing.style.strokeDashoffset = valueIndexOffset;
+        }
+        if (valueIndexValue) {
+            valueIndexValue.textContent = `+${dept.valueIndex}%`;
+        }
+        
+        // CoIQ（0-1の範囲を0-100%に変換）
+        const coiqPercent = dept.coIQ * 100;
+        const coiqOffset = 251.2 * (1 - coiqPercent / 100);
+        if (coiqRing) {
+            coiqRing.style.strokeDashoffset = coiqOffset;
+        }
+        if (coiqValue) {
+            coiqValue.textContent = dept.coIQ.toFixed(2);
+        }
+        
+        // Diversity（0-1の範囲を0-100%に変換）
+        const diversityPercent = dept.diversityScore * 100;
+        const diversityOffset = 251.2 * (1 - diversityPercent / 100);
+        if (diversityRing) {
+            diversityRing.style.strokeDashoffset = diversityOffset;
+        }
+        if (diversityValue) {
+            diversityValue.textContent = dept.diversityScore.toFixed(2);
+        }
+    }
+}
+
+// L3層を表示
+function showL3Layer(dept) {
+    const tooltip = document.getElementById('hologram-tooltip');
+    if (!tooltip) return;
+    
+    const l3Layer = tooltip.querySelector('.l3-layer');
+    if (l3Layer) {
+        l3Layer.classList.add('visible');
+        
+        // トップ3エージェントを生成
+        const agentsList = tooltip.querySelector('.agents-list');
+        if (agentsList) {
+            agentsList.innerHTML = '';
+            const topAgents = generateTopAgents(3);
+            topAgents.forEach((agent, index) => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <span class="agent-name">${index + 1}. ${agent.name}</span>
+                    <span class="agent-metric">${agent.metricLabel} ${agent.metricValue}%</span>
+                `;
+                agentsList.appendChild(li);
+            });
+        }
+        
+        // AI貢献サマリーを生成
+        const summaryText = tooltip.querySelector('.summary-text');
+        if (summaryText) {
+            summaryText.textContent = generateAISummary(dept);
+        }
+    }
+}
+
+// トップエージェントを生成
+function generateTopAgents(count) {
+    const agents = [];
+    const metrics = [
+        { label: '生成貢献', value: () => 85 + Math.floor(Math.random() * 15) },
+        { label: '協働指数', value: () => 88 + Math.floor(Math.random() * 12) },
+        { label: 'AI応答精度', value: () => 90 + Math.floor(Math.random() * 10) }
+    ];
+    
+    for (let i = 0; i < count; i++) {
+        const metric = metrics[i % metrics.length];
+        agents.push({
+            name: generateName(),
+            metricLabel: metric.label,
+            metricValue: metric.value()
+        });
+    }
+    
+    return agents;
+}
+
+// AI貢献サマリーを動的生成
+function generateAISummary(dept) {
+    const params = dept.summaryParams;
+    
+    // 部署ごとの具体的な効果と指標を定義
+    const summaryTemplates = {
+        consumer: {
+            effects: [
+                { area: '顧客分析', benefit: '提案精度', metric: '顧客満足度', improvement: 22 },
+                { area: '行動予測', benefit: 'マーケティング効率', metric: '反応率', improvement: 18 }
+            ],
+            cultural: 'AIを活用した意思決定支援により、提案品質が安定化し、チーム間の判断スピードが月次で上昇。'
+        },
+        corporate: {
+            effects: [
+                { area: '営業提案', benefit: '提案品質', metric: '判断スピード', improvement: 27 },
+                { area: '商談分析', benefit: '成約率', metric: '営業効率', improvement: 19 }
+            ],
+            cultural: 'AIを活用した意思決定支援により、提案品質が安定化し、チーム間の判断スピードが月次で上昇。'
+        },
+        technology: {
+            effects: [
+                { area: 'コンテンツ生成', benefit: '制作効率', metric: '品質評価', improvement: 35 },
+                { area: '開発支援', benefit: 'コード品質', metric: '開発速度', improvement: 28 }
+            ],
+            cultural: 'AIを活用した意思決定支援により、提案品質が安定化し、チーム間の判断スピードが月次で上昇。'
+        },
+        it: {
+            effects: [
+                { area: '採用プロセス', benefit: '選考効率', metric: 'マッチング精度', improvement: 19 },
+                { area: 'システム運用', benefit: '障害対応速度', metric: '稼働率', improvement: 15 }
+            ],
+            cultural: 'AIを活用した意思決定支援により、提案品質が安定化し、チーム間の判断スピードが月次で上昇。'
+        },
+        finance: {
+            effects: [
+                { area: '経営分析', benefit: 'レポート作成', metric: '分析精度', improvement: 31 },
+                { area: '財務予測', benefit: '予測精度', metric: '意思決定速度', improvement: 24 }
+            ],
+            cultural: 'AIを活用した意思決定支援により、提案品質が安定化し、チーム間の判断スピードが月次で上昇。'
+        }
+    };
+    
+    const template = summaryTemplates[dept.id] || summaryTemplates.corporate;
+    const effect = template.effects[Math.floor(Math.random() * template.effects.length)];
+    
+    // 部署ごとの改善率を計算（元のパラメータに基づく）
+    const speedImprovement = Math.floor(10 + (dept.valueIndex / 40) * 15); // 10-25%の範囲
+    
+    // 2文構成のサマリーを生成
+    const firstSentence = `AIを活用した意思決定支援により、${effect.benefit}が安定化し、チーム間の判断スピードが月次で${speedImprovement}％上昇。`;
+    const secondSentence = `部署全体で"AIを伴う判断文化"が定着しつつあります。`;
+    
+    return `${firstSentence}\n\n${secondSentence}`;
+}
+
+// ツールチップの位置を更新
+function updateTooltipPosition(mouseX, mouseY) {
+    const tooltip = document.getElementById('hologram-tooltip');
+    if (!tooltip) return;
+    
+    const offsetX = 20;
+    const offsetY = -20;
+    
+    // 画面端を考慮した位置調整
+    const tooltipWidth = 400; // 推定幅
+    const tooltipHeight = 300; // 推定高さ
+    
+    let x = mouseX + offsetX;
+    let y = mouseY + offsetY;
+    
+    // 右端を超える場合は左側に表示
+    if (x + tooltipWidth > window.innerWidth) {
+        x = mouseX - tooltipWidth - offsetX;
+    }
+    
+    // 下端を超える場合は上側に表示
+    if (y + tooltipHeight > window.innerHeight) {
+        y = mouseY - tooltipHeight - offsetY;
+    }
+    
+    tooltip.style.left = `${x}px`;
+    tooltip.style.top = `${y}px`;
+}
+
+// ツールチップを非表示にする
 function hideTooltip() {
-    // 何もしない
+    const tooltip = document.getElementById('hologram-tooltip');
+    if (!tooltip) return;
+    
+    clearAllTimers();
+    
+    // 各レイヤーを非表示
+    const layers = tooltip.querySelectorAll('.tooltip-layer');
+    layers.forEach(layer => {
+        layer.classList.remove('visible');
+    });
+    
+    // ツールチップを非表示
+    tooltip.style.display = 'none';
+    hoveredDepartment = null;
+}
+
+// すべてのタイマーをクリア
+function clearAllTimers() {
+    if (tooltipTimer) {
+        clearTimeout(tooltipTimer);
+        tooltipTimer = null;
+    }
+    if (l2Timer) {
+        clearTimeout(l2Timer);
+        l2Timer = null;
+    }
+    if (l3Timer) {
+        clearTimeout(l3Timer);
+        l3Timer = null;
+    }
 }
 
 // クラスタパネル表示（無効化）
