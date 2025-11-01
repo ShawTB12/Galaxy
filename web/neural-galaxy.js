@@ -132,7 +132,7 @@ function init() {
     // 初期サイズ設定（サイドバーが開いている状態）
     renderer.setSize(containerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setClearColor(themes[currentTheme].bg);
+    renderer.setClearColor(0x000000, 0); // 完全透明にしてCSSの背景を表示
     document.getElementById('canvas-container').appendChild(renderer.domElement);
     
     // ライト
@@ -993,14 +993,12 @@ function setupSidebar() {
     const sidebar = document.getElementById('sidebar');
     const toggleBtn = document.getElementById('sidebar-toggle');
     const canvasContainer = document.getElementById('canvas-container');
-    const legend = document.getElementById('legend');
     const menuItems = document.querySelectorAll('.menu-item');
     
     let isOpen = true; // デフォルトで開いた状態
     
     // 初期状態を設定
     toggleBtn.classList.add('active');
-    legend.classList.add('shifted');
     // canvas-containerは初期状態で左:280pxなので、shiftedは不要
     
     // トグルボタンのクリック
@@ -1011,12 +1009,10 @@ function setupSidebar() {
             sidebar.classList.remove('collapsed');
             toggleBtn.classList.add('active');
             canvasContainer.classList.remove('collapsed');
-            legend.classList.add('shifted');
         } else {
             sidebar.classList.add('collapsed');
             toggleBtn.classList.remove('active');
             canvasContainer.classList.add('collapsed');
-            legend.classList.remove('shifted');
         }
         
         // カメラのアスペクト比を調整

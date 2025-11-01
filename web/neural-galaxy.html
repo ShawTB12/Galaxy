@@ -17,7 +17,14 @@
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             overflow: hidden;
-            background: #000;
+            background: 
+                radial-gradient(ellipse at 20% 30%, rgba(80, 30, 150, 0.25) 0%, transparent 40%),
+                radial-gradient(ellipse at 80% 20%, rgba(30, 60, 180, 0.2) 0%, transparent 50%),
+                radial-gradient(ellipse at 40% 80%, rgba(150, 70, 200, 0.18) 0%, transparent 45%),
+                radial-gradient(ellipse at 70% 70%, rgba(60, 100, 180, 0.15) 0%, transparent 40%),
+                radial-gradient(ellipse at 50% 50%, rgba(40, 30, 100, 0.12) 0%, transparent 60%),
+                linear-gradient(135deg, #000208 0%, #000615 30%, #000a25 50%, #000f35 70%, #000820 100%);
+            background-attachment: fixed;
             color: #fff;
         }
         
@@ -443,32 +450,6 @@
     </aside>
     
     <div id="canvas-container"></div>
-    
-    <div id="legend">
-        <h3>部署 / Departments</h3>
-        <div class="legend-items">
-            <div class="legend-item">
-                <div class="legend-color" style="background: #2196F3; color: #2196F3;"></div>
-                <span>コンシューマー統括</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #FFC107; color: #FFC107;"></div>
-                <span>法人統括</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #4CAF50; color: #4CAF50;"></div>
-                <span>テクノロジーユニット統括</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #E91E63; color: #E91E63;"></div>
-                <span>IT統括</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color" style="background: #9C27B0; color: #9C27B0;"></div>
-                <span>財務統括</span>
-            </div>
-        </div>
-    </div>
     
     <!-- パネルは削除 -->
     
