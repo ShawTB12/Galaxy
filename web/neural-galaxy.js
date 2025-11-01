@@ -649,14 +649,24 @@ function setupEventListeners() {
             galaxyGroup.rotation.x += deltaY * 0.005;
             
             previousMousePosition = { x: e.clientX, y: e.clientY };
+            
+            // ドラッグ中はすべてのUIを非表示
+            hideTooltip();
+            hideAllPanels();
         } else {
-            // ホバー効果
-            updateTooltip(e);
+            // ホバー効果（ツールチップとパネルの表示）
+            updateHoverEffects(e);
         }
     });
     
     renderer.domElement.addEventListener('mouseup', () => {
         isDragging = false;
+    });
+    
+    // マウスがキャンバスから離れた時にすべてのUIを非表示
+    renderer.domElement.addEventListener('mouseleave', () => {
+        hideTooltip();
+        hideAllPanels();
     });
     
     renderer.domElement.addEventListener('click', onClick);
@@ -688,17 +698,20 @@ function setupSidebar() {
     // トグルボタンのクリック
     toggleBtn.addEventListener('click', () => {
         isOpen = !isOpen;
+        const clusterPanel = document.getElementById('cluster-panel');
         
         if (isOpen) {
             sidebar.classList.remove('collapsed');
             toggleBtn.classList.add('active');
             canvasContainer.classList.remove('collapsed');
             legend.classList.add('shifted');
+            clusterPanel.classList.remove('collapsed');
         } else {
             sidebar.classList.add('collapsed');
             toggleBtn.classList.remove('active');
             canvasContainer.classList.add('collapsed');
             legend.classList.remove('shifted');
+            clusterPanel.classList.add('collapsed');
         }
         
         // カメラのアスペクト比を調整
@@ -761,54 +774,12 @@ function onWindowResize() {
 
 // クリックイベント
 function onClick(event) {
-    raycaster.setFromCamera(mouse, camera);
-    
-    // 球体フレーム関連のオブジェクトを除外してインターセクトチェック
-    const clickableObjects = [];
-    galaxyGroup.children.forEach(child => {
-        if (child.userData.type !== 'sphereFrame' && 
-            child.userData.type !== 'glowSphere' && 
-            child.userData.type !== 'gridLine' && 
-            child.userData.type !== 'spiral' &&
-            child.userData.type !== 'outerGlow') {
-            clickableObjects.push(child);
-        }
-    });
-    
-    const intersects = raycaster.intersectObjects(clickableObjects, true);
-    
-    if (intersects.length > 0) {
-        let object = intersects[0].object;
-        
-        // 親を辿ってクラスタまたはエージェントを見つける
-        let foundObject = null;
-        let currentObj = object;
-        
-        while (currentObj) {
-            if (currentObj.userData.type === 'agent') {
-                foundObject = currentObj;
-                break;
-            } else if (currentObj.userData.type === 'cluster') {
-                foundObject = currentObj;
-                break;
-            }
-            currentObj = currentObj.parent;
-        }
-        
-        if (foundObject) {
-            if (foundObject.userData.type === 'agent') {
-                showAgentDetail(foundObject);
-            } else if (foundObject.userData.type === 'cluster') {
-                showClusterPanel(foundObject.userData.department);
-            }
-        }
-    } else {
-        hideAllPanels();
-    }
+    // クリック時は何もしない（ホバーで表示するため）
+    // 必要に応じて、固定表示などの機能を追加可能
 }
 
-// ツールチップ更新
-function updateTooltip(event) {
+// ホバー効果を更新（ツールチップとパネル）
+function updateHoverEffects(event) {
     raycaster.setFromCamera(mouse, camera);
     
     // 球体フレーム関連のオブジェクトを除外
@@ -830,37 +801,66 @@ function updateTooltip(event) {
     if (intersects.length > 0) {
         let object = intersects[0].object;
         
-        // エージェントを探す
+        // エージェントまたはクラスタを探す
         let agent = null;
+        let cluster = null;
         let currentObj = object;
+        
         while (currentObj) {
             if (currentObj.userData.type === 'agent') {
                 agent = currentObj;
+                break;
+            } else if (currentObj.userData.type === 'cluster') {
+                cluster = currentObj;
                 break;
             }
             currentObj = currentObj.parent;
         }
         
+        // エージェントが見つかった場合
         if (agent) {
-            tooltip.style.display = 'block';
-            tooltip.style.left = event.clientX + 10 + 'px';
-            tooltip.style.top = event.clientY + 10 + 'px';
-            tooltip.innerHTML = `
-                <strong>${agent.userData.name}</strong><br>
-                ${agent.userData.department.name}<br>
-                活用率: ${agent.userData.rate}%
-            `;
-        } else {
-            tooltip.style.display = 'none';
+            // ツールチップを非表示
+            hideTooltip();
+            
+            // エージェント詳細パネルをカーソルの横に表示
+            showAgentDetail(agent, event);
+            return;
         }
-    } else {
+        
+        // クラスタが見つかった場合
+        if (cluster && cluster.userData.department) {
+            hideTooltip();
+            showClusterPanel(cluster.userData.department, event);
+            return;
+        }
+    }
+    
+    // 何も見つからない場合はすべて非表示
+    hideTooltip();
+    hideAllPanels();
+}
+
+// ツールチップを非表示にする
+function hideTooltip() {
+    const tooltip = document.getElementById('tooltip');
+    if (tooltip) {
         tooltip.style.display = 'none';
     }
 }
 
 // クラスタパネル表示
-function showClusterPanel(dept) {
+function showClusterPanel(dept, event) {
     const panel = document.getElementById('cluster-panel');
+    const sidebar = document.getElementById('sidebar');
+    const isSidebarOpen = !sidebar.classList.contains('collapsed');
+    
+    // サイドバーの状態に応じて位置を調整
+    if (isSidebarOpen) {
+        panel.classList.remove('collapsed');
+    } else {
+        panel.classList.add('collapsed');
+    }
+    
     panel.style.display = 'block';
     
     document.getElementById('cluster-name').textContent = dept.name;
@@ -884,8 +884,32 @@ function showClusterPanel(dept) {
 }
 
 // エージェント詳細表示
-function showAgentDetail(agent) {
+function showAgentDetail(agent, event) {
     const detail = document.getElementById('agent-detail');
+    
+    // カーソルの横に配置（画面外に出ないように調整）
+    const offsetX = 20;
+    const offsetY = -50;
+    let left = event.clientX + offsetX;
+    let top = event.clientY + offsetY;
+    
+    // 画面の右端を超えないように調整
+    if (left + 350 > window.innerWidth) {
+        left = event.clientX - 370; // 左側に表示
+    }
+    
+    // 画面の下端を超えないように調整
+    if (top + 300 > window.innerHeight) {
+        top = window.innerHeight - 320;
+    }
+    
+    // 画面の上端を超えないように調整
+    if (top < 10) {
+        top = 10;
+    }
+    
+    detail.style.left = left + 'px';
+    detail.style.top = top + 'px';
     detail.style.display = 'block';
     
     document.getElementById('agent-name').textContent = agent.userData.name;
