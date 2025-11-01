@@ -627,11 +627,15 @@ function createDepartmentNebulas() {
         nebulaGeometry.setAttribute('position', new THREE.Float32BufferAttribute(nebulaPositions, 3));
         nebulaGeometry.setAttribute('color', new THREE.Float32BufferAttribute(nebulaColors, 3));
         
+        // コンシューマーと財務統括の霧を薄くする
+        const nebulaOpacity = (dept.id === 'consumer' || dept.id === 'finance') ? 0.02 : 0.25;
+        const nebulaSize = (dept.id === 'consumer' || dept.id === 'finance') ? 0.25 : 0.4;
+        
         const nebulaMaterial = new THREE.PointsMaterial({
-            size: 0.4, // サイズを大きく（0.3 → 0.4）
+            size: nebulaSize, // コンシューマーと財務統括はサイズも小さく
             vertexColors: true,
             transparent: true,
-            opacity: 0.25, // 透明度を上げて色を濃く（0.15 → 0.25）
+            opacity: nebulaOpacity, // 透明度を上げて色を濃く（0.15 → 0.25）、コンシューマーと財務統括は0.02
             blending: THREE.AdditiveBlending,
             sizeAttenuation: true,
             depthTest: true,
@@ -900,7 +904,11 @@ function animate() {
     departmentNebulas.forEach((nebula, index) => {
         if (nebula.userData.pulseSpeed) {
             const pulse = Math.sin(time * nebula.userData.pulseSpeed) * 0.05 + 1;
-            nebula.material.opacity = 0.1 + Math.sin(time * nebula.userData.pulseSpeed) * 0.04;
+            // コンシューマーと財務統括は薄く、他は従来通り
+            const dept = nebula.userData.department;
+            const baseOpacity = (dept.id === 'consumer' || dept.id === 'finance') ? 0.02 : 0.1;
+            const pulseAmount = (dept.id === 'consumer' || dept.id === 'finance') ? 0.01 : 0.04;
+            nebula.material.opacity = baseOpacity + Math.sin(time * nebula.userData.pulseSpeed) * pulseAmount;
             nebula.scale.setScalar(0.98 + pulse * 0.02);
         }
     });
