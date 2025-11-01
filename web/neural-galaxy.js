@@ -10,6 +10,13 @@ let selectedCluster = null, selectedAgent = null;
 let time = 0;
 let currentTheme = 'neural';
 
+// シナプスパーティクルシステム用
+let pointCloud;
+let lineMesh;
+let particleVelocity = [];
+const sphereRadius = 8; // 球体の境界半径
+const maxVelocity = 0.01; // パーティクルの最大速度（ゆっくり）
+
 // 部署データ（球面座標で配置）
 const departments = [
     {
@@ -170,39 +177,50 @@ function createNeonSphereFrame() {
     const sphereMaterial = new THREE.LineBasicMaterial({
         color: 0x00d4ff,
         transparent: true,
-        opacity: 0.3,
-        linewidth: 1
+        opacity: 0.15,
+        linewidth: 1,
+        depthTest: true,
+        depthWrite: false
     });
     const sphereFrame = new THREE.LineSegments(sphereEdges, sphereMaterial);
     sphereFrame.userData.type = 'sphereFrame';
+    sphereFrame.renderOrder = 0; // 最背面に表示
     galaxyGroup.add(sphereFrame);
     
-    // グロー効果のための半透明球体（外側）
-    const glowGeometry1 = new THREE.SphereGeometry(sphereRadius, 32, 32);
-    const glowMaterial1 = new THREE.MeshBasicMaterial({
-        color: 0x0088ff,
-        transparent: true,
-        opacity: 0.05,
-        side: THREE.BackSide,
-        blending: THREE.AdditiveBlending
-    });
-    const glowSphere1 = new THREE.Mesh(glowGeometry1, glowMaterial1);
-    glowSphere1.userData.type = 'glowSphere';
-    galaxyGroup.add(glowSphere1);
+    // グロー効果を削除してシンプルに
+    // const glowGeometry1 = new THREE.SphereGeometry(sphereRadius, 32, 32);
+    // const glowMaterial1 = new THREE.MeshBasicMaterial({
+    //     color: 0x0088ff,
+    //     transparent: true,
+    //     opacity: 0.02,
+    //     side: THREE.BackSide,
+    //     blending: THREE.AdditiveBlending,
+    //     depthTest: true,
+    //     depthWrite: false
+    // });
+    // const glowSphere1 = new THREE.Mesh(glowGeometry1, glowMaterial1);
+    // glowSphere1.userData.type = 'glowSphere';
+    // glowSphere1.renderOrder = 1;
+    // galaxyGroup.add(glowSphere1);
     
-    // 内側のグロー球体
-    const glowGeometry2 = new THREE.SphereGeometry(sphereRadius * 0.98, 32, 32);
-    const glowMaterial2 = new THREE.MeshBasicMaterial({
-        color: 0x00bbff,
-        transparent: true,
-        opacity: 0.08,
-        side: THREE.FrontSide,
-        blending: THREE.AdditiveBlending
-    });
-    const glowSphere2 = new THREE.Mesh(glowGeometry2, glowMaterial2);
-    glowSphere2.userData.type = 'glowSphere';
-    galaxyGroup.add(glowSphere2);
+    // 内側のグロー球体も削除
+    // const glowGeometry2 = new THREE.SphereGeometry(sphereRadius * 0.98, 32, 32);
+    // const glowMaterial2 = new THREE.MeshBasicMaterial({
+    //     color: 0x00bbff,
+    //     transparent: true,
+    //     opacity: 0.03,
+    //     side: THREE.FrontSide,
+    //     blending: THREE.AdditiveBlending,
+    //     depthTest: true,
+    //     depthWrite: false
+    // });
+    // const glowSphere2 = new THREE.Mesh(glowGeometry2, glowMaterial2);
+    // glowSphere2.userData.type = 'glowSphere';
+    // glowSphere2.renderOrder = 2;
+    // galaxyGroup.add(glowSphere2);
     
+    // 経度線、緯度線、螺旋は削除してシンプルに
+    /*
     // 経度線（縦の円）
     for (let i = 0; i < 12; i++) {
         const angle = (i / 12) * Math.PI * 2;
@@ -230,11 +248,14 @@ function createNeonSphereFrame() {
         const material = new THREE.LineBasicMaterial({
             color: 0x00d4ff,
             transparent: true,
-            opacity: 0.25,
-            blending: THREE.AdditiveBlending
+            opacity: 0.08,
+            blending: THREE.AdditiveBlending,
+            depthTest: true,
+            depthWrite: false
         });
         const line = new THREE.Line(geometry, material);
         line.userData.type = 'gridLine';
+        line.renderOrder = 3;
         galaxyGroup.add(line);
     }
     
@@ -265,11 +286,14 @@ function createNeonSphereFrame() {
         const material = new THREE.LineBasicMaterial({
             color: 0x00d4ff,
             transparent: true,
-            opacity: 0.25,
-            blending: THREE.AdditiveBlending
+            opacity: 0.08,
+            blending: THREE.AdditiveBlending,
+            depthTest: true,
+            depthWrite: false
         });
         const line = new THREE.Line(geometry, material);
         line.userData.type = 'gridLine';
+        line.renderOrder = 3;
         galaxyGroup.add(line);
     }
     
@@ -287,11 +311,14 @@ function createNeonSphereFrame() {
     const spiralMaterial = new THREE.LineBasicMaterial({
         color: 0x00ffff,
         transparent: true,
-        opacity: 0.2,
-        blending: THREE.AdditiveBlending
+        opacity: 0.05,
+        blending: THREE.AdditiveBlending,
+        depthTest: true,
+        depthWrite: false
     });
     const spiral = new THREE.Line(spiralGeometry, spiralMaterial);
     spiral.userData.type = 'spiral';
+    spiral.renderOrder = 4;
     galaxyGroup.add(spiral);
     
     // 外側の大きなグロー球体（アウターオーラ）
@@ -299,13 +326,17 @@ function createNeonSphereFrame() {
     const outerGlowMaterial = new THREE.MeshBasicMaterial({
         color: 0x0066ff,
         transparent: true,
-        opacity: 0.03,
+        opacity: 0.01,
         side: THREE.BackSide,
-        blending: THREE.AdditiveBlending
+        blending: THREE.AdditiveBlending,
+        depthTest: true,
+        depthWrite: false
     });
     const outerGlow = new THREE.Mesh(outerGlowGeometry, outerGlowMaterial);
     outerGlow.userData.type = 'outerGlow';
+    outerGlow.renderOrder = 5;
     galaxyGroup.add(outerGlow);
+    */
 }
 
 // 背景の星空
@@ -333,223 +364,170 @@ function createBackgroundStars() {
     starsGeometry.setAttribute('color', new THREE.Float32BufferAttribute(starColors, 3));
     
     const starsMaterial = new THREE.PointsMaterial({
-        size: 0.1,
+        size: 0.05,
         vertexColors: true,
         transparent: true,
-        opacity: 0.6
+        opacity: 0.3
     });
     
     const stars = new THREE.Points(starsGeometry, starsMaterial);
     scene.add(stars);
 }
 
-// 組織の銀河を生成
+// 組織の銀河を生成（シナプス表現）
 function createOrganizationGalaxy() {
-    const sphereRadius = 7.5; // 外枠の球体半径に合わせる
+    // 全パーティクル数を計算
+    let totalParticles = 0;
+    departments.forEach(dept => {
+        totalParticles += dept.memberCount;
+    });
     
+    // パーティクルの位置と色の配列を準備
+    const particlePositions = new Float32Array(totalParticles * 3);
+    const particleColors = new Float32Array(totalParticles * 3);
+    
+    let particleIndex = 0;
+    
+    // 各部署ごとにパーティクルを生成
     departments.forEach((dept, deptIndex) => {
-        const clusterGroup = new THREE.Group();
-        clusterGroup.userData = { 
-            type: 'cluster',
-            department: dept
-        };
+        const color = new THREE.Color(dept.color);
         
-        // 球面座標から直交座標に変換（球体表面に配置）
-        const x = sphereRadius * Math.sin(dept.phi) * Math.cos(dept.theta);
-        const y = sphereRadius * Math.cos(dept.phi);
-        const z = sphereRadius * Math.sin(dept.phi) * Math.sin(dept.theta);
-        
-        clusterGroup.position.set(x, y, z);
-        
-        // 部署内のエージェント（社員）を生成
-        const memberCount = dept.memberCount;
-        
-        for (let i = 0; i < memberCount; i++) {
-            const agent = createAgent(dept, i, memberCount, sphereRadius);
-            clusterGroup.add(agent);
-            agents.push(agent);
+        for (let i = 0; i < dept.memberCount; i++) {
+            // 球体内のランダムな位置に配置
+            const r = (sphereRadius - 1) * Math.random();
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            
+            particlePositions[particleIndex * 3] = r * Math.sin(phi) * Math.cos(theta);
+            particlePositions[particleIndex * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+            particlePositions[particleIndex * 3 + 2] = r * Math.cos(phi);
+            
+            // 色を設定
+            particleColors[particleIndex * 3] = color.r;
+            particleColors[particleIndex * 3 + 1] = color.g;
+            particleColors[particleIndex * 3 + 2] = color.b;
+            
+            // 速度ベクトルを初期化
+            particleVelocity[particleIndex] = new THREE.Vector3();
+            particleVelocity[particleIndex].x = -1 + Math.random() * 2.0;
+            particleVelocity[particleIndex].y = -1 + Math.random() * 2.0;
+            particleVelocity[particleIndex].z = -1 + Math.random() * 2.0;
+            particleVelocity[particleIndex].multiplyScalar(maxVelocity / Math.sqrt(3.0));
+            
+            particleIndex++;
         }
-        
-        // クラスタのオーラ（星雲効果）を球面に沿って配置
-        createClusterAura(clusterGroup, dept, sphereRadius);
-        
-        galaxyGroup.add(clusterGroup);
-        clusterGroups.push(clusterGroup);
     });
     
-    // 部署間の連携線を生成
-    createConnections();
-}
-
-// 個人エージェント（星）を生成 - 球面に沿って配置
-function createAgent(dept, index, total, sphereRadius) {
-    // クラスタ内での位置（球面表面に分散）
-    const spread = 0.8; // 部署の広がり
-    const angle = (index / total) * Math.PI * 2 + Math.random() * 0.3;
-    const distance = 0.3 + Math.random() * 0.5;
+    // パーティクルのジオメトリとマテリアルを作成
+    const particles = new THREE.BufferGeometry();
+    particles.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3).setUsage(THREE.DynamicDrawUsage));
+    particles.setAttribute('color', new THREE.BufferAttribute(particleColors, 3));
     
-    // 球面に沿った位置計算
-    const localTheta = dept.theta + Math.cos(angle) * distance * spread;
-    const localPhi = dept.phi + Math.sin(angle) * distance * spread;
-    
-    // 球面座標から直交座標へ（球体表面より少し内側）
-    const radius = sphereRadius * (0.95 + Math.random() * 0.1); // 球面付近に配置
-    const x = radius * Math.sin(localPhi) * Math.cos(localTheta);
-    const y = radius * Math.cos(localPhi);
-    const z = radius * Math.sin(localPhi) * Math.sin(localTheta);
-    
-    // クラスタ中心からの相対位置
-    const clusterX = sphereRadius * Math.sin(dept.phi) * Math.cos(dept.theta);
-    const clusterY = sphereRadius * Math.cos(dept.phi);
-    const clusterZ = sphereRadius * Math.sin(dept.phi) * Math.sin(dept.theta);
-    
-    const relativeX = x - clusterX;
-    const relativeY = y - clusterY;
-    const relativeZ = z - clusterZ;
-    
-    // 星のジオメトリ
-    const geometry = new THREE.SphereGeometry(0.08, 8, 8);
-    
-    // 活動度に応じたサイズと明るさ
-    const activity = 0.5 + Math.random() * 0.5;
-    const scale = 0.7 + activity * 0.6;
-    
-    // マテリアル
-    const material = new THREE.MeshBasicMaterial({
-        color: dept.color,
-        transparent: true,
-        opacity: 0.8
-    });
-    
-    const agent = new THREE.Mesh(geometry, material);
-    agent.position.set(relativeX, relativeY, relativeZ);
-    agent.scale.setScalar(scale);
-    
-    // グロー効果
-    const glowGeometry = new THREE.SphereGeometry(0.15, 8, 8);
-    const glowMaterial = new THREE.MeshBasicMaterial({
-        color: dept.color,
-        transparent: true,
-        opacity: 0.3,
-        blending: THREE.AdditiveBlending
-    });
-    const glow = new THREE.Mesh(glowGeometry, glowMaterial);
-    agent.add(glow);
-    
-    // メタデータ
-    agent.userData = {
-        type: 'agent',
-        department: dept,
-        activity: activity,
-        name: generateName(),
-        rate: Math.floor(70 + activity * 30),
-        output: Math.floor(activity * 500),
-        collaborations: Math.floor(Math.random() * 15)
-    };
-    
-    return agent;
-}
-
-// クラスタのオーラ（星雲効果）- 球面に沿って配置
-function createClusterAura(clusterGroup, dept, sphereRadius) {
-    const particleCount = 150;
-    const geometry = new THREE.BufferGeometry();
-    const positions = [];
-    const colors = [];
-    const sizes = [];
-    
-    const color = new THREE.Color(dept.color);
-    
-    // クラスタの中心位置
-    const centerX = sphereRadius * Math.sin(dept.phi) * Math.cos(dept.theta);
-    const centerY = sphereRadius * Math.cos(dept.phi);
-    const centerZ = sphereRadius * Math.sin(dept.phi) * Math.sin(dept.theta);
-    
-    for (let i = 0; i < particleCount; i++) {
-        const spread = 1.2;
-        const angle = Math.random() * Math.PI * 2;
-        const distance = Math.random() * spread;
-        
-        // 球面に沿った位置
-        const localTheta = dept.theta + Math.cos(angle) * distance;
-        const localPhi = dept.phi + Math.sin(angle) * distance;
-        const radius = sphereRadius * (0.92 + Math.random() * 0.15);
-        
-        const x = radius * Math.sin(localPhi) * Math.cos(localTheta);
-        const y = radius * Math.cos(localPhi);
-        const z = radius * Math.sin(localPhi) * Math.sin(localTheta);
-        
-        // クラスタ中心からの相対位置
-        positions.push(x - centerX, y - centerY, z - centerZ);
-        colors.push(color.r, color.g, color.b);
-        sizes.push(Math.random() * 0.4 + 0.1);
-    }
-    
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-    geometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
-    
-    const material = new THREE.PointsMaterial({
-        size: 0.2,
+    const pointMaterial = new THREE.PointsMaterial({
+        size: 0.08,
         vertexColors: true,
         transparent: true,
-        opacity: 0.2,
+        opacity: 0.85,
         blending: THREE.AdditiveBlending,
-        sizeAttenuation: true
+        sizeAttenuation: true,
+        depthTest: true,
+        depthWrite: false
     });
     
-    const aura = new THREE.Points(geometry, material);
-    aura.userData.type = 'aura';
-    clusterGroup.add(aura);
+    pointCloud = new THREE.Points(particles, pointMaterial);
+    pointCloud.renderOrder = 999; // 最前面に表示
+    galaxyGroup.add(pointCloud);
+    console.log('PointCloud added to scene:', pointCloud);
+    
+    // 線の頂点数を設定（近くのパーティクル間のみ接続）
+    const maxConnections = totalParticles * 10; // 各パーティクルから最大10本の線
+    const linePositions = new Float32Array(maxConnections * 6); // 線1本につき2頂点x3座標
+    
+    const lineGeometry = new THREE.BufferGeometry();
+    lineGeometry.setAttribute('position', new THREE.BufferAttribute(linePositions, 3).setUsage(THREE.DynamicDrawUsage));
+    
+    const lineMaterial = new THREE.LineBasicMaterial({
+        color: 0x4fc3f7,
+        transparent: true,
+        opacity: 0.15,
+        linewidth: 1,
+        blending: THREE.AdditiveBlending,
+        depthTest: true,
+        depthWrite: false
+    });
+    
+    // LineSegmentsで線を生成
+    lineMesh = new THREE.LineSegments(lineGeometry, lineMaterial);
+    lineMesh.renderOrder = 998; // パーティクルの後ろに表示
+    galaxyGroup.add(lineMesh);
+    
+    console.log('Particles created:', totalParticles);
+    console.log('LineMesh added to scene:', lineMesh);
+    console.log('Particle positions sample:', particlePositions.slice(0, 9));
 }
 
-// 部署間連携線
-function createConnections() {
-    const connectionCount = 30;
+// シナプスパーティクルの更新処理
+function updateSynapseParticles() {
+    if (!pointCloud || !lineMesh) return;
     
-    for (let i = 0; i < connectionCount; i++) {
-        const agent1 = agents[Math.floor(Math.random() * agents.length)];
-        const agent2 = agents[Math.floor(Math.random() * agents.length)];
+    const particlePositions = pointCloud.geometry.attributes.position.array;
+    const linePositions = lineMesh.geometry.attributes.position.array;
+    const particleNum = particlePositions.length / 3;
+    const rHalf = sphereRadius / 2.0;
+    const connectionDistance = 2.5; // 接続する最大距離（短めに）
+    
+    let vertexpos = 0;
+    
+    // パーティクルの位置を更新
+    for (let i = 0; i < particleNum; i++) {
+        // 速度を位置に加算
+        particlePositions[i * 3] += particleVelocity[i].x;
+        particlePositions[i * 3 + 1] += particleVelocity[i].y;
+        particlePositions[i * 3 + 2] += particleVelocity[i].z;
         
-        if (agent1 === agent2) continue;
-        
-        // 異なる部署間の連携を優先
-        if (agent1.userData.department.id === agent2.userData.department.id && Math.random() > 0.3) {
-            continue;
+        // 境界での反射処理
+        if (particlePositions[i * 3] < -rHalf || particlePositions[i * 3] > rHalf) {
+            particleVelocity[i].x *= -1;
         }
-        
-        const points = [];
-        const pos1 = new THREE.Vector3();
-        const pos2 = new THREE.Vector3();
-        agent1.getWorldPosition(pos1);
-        agent2.getWorldPosition(pos2);
-        
-        // ベジェ曲線で接続
-        const mid = new THREE.Vector3().lerpVectors(pos1, pos2, 0.5);
-        mid.y += Math.random() * 2 - 1;
-        
-        const curve = new THREE.QuadraticBezierCurve3(pos1, mid, pos2);
-        points.push(...curve.getPoints(20));
-        
-        const geometry = new THREE.BufferGeometry().setFromPoints(points);
-        const material = new THREE.LineBasicMaterial({
-            color: 0x4fc3f7,
-            transparent: true,
-            opacity: 0.15,
-            blending: THREE.AdditiveBlending
-        });
-        
-        const line = new THREE.Line(geometry, material);
-        line.userData = {
-            type: 'connection',
-            agent1: agent1,
-            agent2: agent2,
-            strength: Math.random()
-        };
-        
-        galaxyGroup.add(line);
-        connections.push(line);
+        if (particlePositions[i * 3 + 1] < -rHalf || particlePositions[i * 3 + 1] > rHalf) {
+            particleVelocity[i].y *= -1;
+        }
+        if (particlePositions[i * 3 + 2] < -rHalf || particlePositions[i * 3 + 2] > rHalf) {
+            particleVelocity[i].z *= -1;
+        }
     }
+    
+    // 線の頂点座標を更新（近くのパーティクル間のみ接続）
+    for (let i = 0; i < particleNum; i++) {
+        for (let j = i + 1; j < particleNum; j++) {
+            const dx = particlePositions[i * 3] - particlePositions[j * 3];
+            const dy = particlePositions[i * 3 + 1] - particlePositions[j * 3 + 1];
+            const dz = particlePositions[i * 3 + 2] - particlePositions[j * 3 + 2];
+            const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            
+            // 一定距離以内のパーティクル間に線を引く
+            if (distance < connectionDistance) {
+                if (vertexpos < linePositions.length) {
+                    linePositions[vertexpos++] = particlePositions[i * 3];
+                    linePositions[vertexpos++] = particlePositions[i * 3 + 1];
+                    linePositions[vertexpos++] = particlePositions[i * 3 + 2];
+                    
+                    linePositions[vertexpos++] = particlePositions[j * 3];
+                    linePositions[vertexpos++] = particlePositions[j * 3 + 1];
+                    linePositions[vertexpos++] = particlePositions[j * 3 + 2];
+                }
+            }
+        }
+    }
+    
+    // 残りの線を原点に設定（見えなくする）
+    while (vertexpos < linePositions.length) {
+        linePositions[vertexpos++] = 0;
+    }
+    
+    // 更新を通知するフラグ
+    pointCloud.geometry.attributes.position.needsUpdate = true;
+    lineMesh.geometry.attributes.position.needsUpdate = true;
 }
 
 // 名前生成（ダミー）
@@ -563,61 +541,46 @@ function generateName() {
 // アニメーション
 function animate() {
     requestAnimationFrame(animate);
-    time += 0.01;
+    time += 0.005;
     
-    // 銀河全体の回転
-    galaxyGroup.rotation.y += 0.0005;
+    // シナプスパーティクルの更新
+    updateSynapseParticles();
     
-    // 球体フレームのパルス効果
+    // 銀河全体のゆっくりした回転
+    galaxyGroup.rotation.y += 0.0001;
+    
+    // 球体フレームのパルス効果（穏やかに）
     galaxyGroup.children.forEach(child => {
         if (child.userData.type === 'sphereFrame') {
-            // ワイヤーフレームの明滅
-            child.material.opacity = 0.25 + Math.sin(time * 2) * 0.1;
+            // ワイヤーフレームの明滅（穏やか）
+            child.material.opacity = 0.1 + Math.sin(time * 0.5) * 0.03;
         } else if (child.userData.type === 'glowSphere') {
-            // グロー球体のパルス
-            const pulse = Math.sin(time * 1.5) * 0.03 + 1;
+            // グロー球体のパルス（穏やか）
+            const pulse = Math.sin(time * 0.8) * 0.015 + 1;
             child.scale.setScalar(pulse);
         } else if (child.userData.type === 'gridLine') {
-            // グリッド線の明滅
-            child.material.opacity = 0.2 + Math.sin(time * 2 + child.id) * 0.08;
+            // グリッド線の明滅（穏やか）
+            child.material.opacity = 0.08 + Math.sin(time * 0.6 + child.id) * 0.02;
         } else if (child.userData.type === 'spiral') {
-            // 螺旋の回転
-            child.rotation.y += 0.002;
-            child.material.opacity = 0.15 + Math.sin(time * 3) * 0.05;
+            // 螺旋の回転（ゆっくり）
+            child.rotation.y += 0.0005;
+            child.material.opacity = 0.05 + Math.sin(time * 0.7) * 0.02;
         } else if (child.userData.type === 'outerGlow') {
-            // 外側グローのパルス
-            const pulse = Math.sin(time * 1.2) * 0.05 + 1;
+            // 外側グローのパルス（穏やか）
+            const pulse = Math.sin(time * 0.5) * 0.02 + 1;
             child.scale.setScalar(pulse);
         }
     });
     
-    // クラスタの呼吸（膨張収縮）
-    clusterGroups.forEach((cluster, index) => {
-        const breathe = Math.sin(time + index) * 0.03 + 1;
-        cluster.scale.setScalar(breathe);
-        
-        // クラスタの微回転
-        cluster.rotation.y += 0.001;
-        cluster.rotation.x += 0.0005;
-    });
+    // パーティクルクラウドのパルス効果（一旦無効化）
+    // if (pointCloud) {
+    //     pointCloud.material.opacity = 0.8 + Math.sin(time * 2) * 0.15;
+    // }
     
-    // エージェントの明滅
-    agents.forEach((agent, index) => {
-        const flicker = Math.sin(time * 3 + index) * 0.2 + 0.8;
-        agent.material.opacity = flicker * agent.userData.activity;
-        
-        // グロー効果のパルス
-        if (agent.children[0]) {
-            const pulse = Math.sin(time * 2 + index) * 0.2 + 0.3;
-            agent.children[0].material.opacity = pulse;
-        }
-    });
-    
-    // 接続線のアニメーション
-    connections.forEach((conn, index) => {
-        const flow = Math.sin(time * 2 + index) * 0.1 + 0.15;
-        conn.material.opacity = flow * conn.userData.strength;
-    });
+    // 線のパルス効果（一旦無効化）
+    // if (lineMesh) {
+    //     lineMesh.material.opacity = 0.15 + Math.sin(time * 1.5) * 0.1;
+    // }
     
     renderer.render(scene, camera);
 }
@@ -782,55 +745,39 @@ function onClick(event) {
 function updateHoverEffects(event) {
     raycaster.setFromCamera(mouse, camera);
     
-    // 球体フレーム関連のオブジェクトを除外
-    const clickableObjects = [];
-    galaxyGroup.children.forEach(child => {
-        if (child.userData.type !== 'sphereFrame' && 
-            child.userData.type !== 'glowSphere' && 
-            child.userData.type !== 'gridLine' && 
-            child.userData.type !== 'spiral' &&
-            child.userData.type !== 'outerGlow') {
-            clickableObjects.push(child);
-        }
-    });
-    
-    const intersects = raycaster.intersectObjects(clickableObjects, true);
-    
-    const tooltip = document.getElementById('tooltip');
-    
-    if (intersects.length > 0) {
-        let object = intersects[0].object;
+    // ポイントクラウドとの交差判定
+    if (pointCloud) {
+        raycaster.params.Points.threshold = 0.5; // パーティクル検出の閾値
+        const intersects = raycaster.intersectObject(pointCloud);
         
-        // エージェントまたはクラスタを探す
-        let agent = null;
-        let cluster = null;
-        let currentObj = object;
-        
-        while (currentObj) {
-            if (currentObj.userData.type === 'agent') {
-                agent = currentObj;
-                break;
-            } else if (currentObj.userData.type === 'cluster') {
-                cluster = currentObj;
-                break;
-            }
-            currentObj = currentObj.parent;
-        }
-        
-        // エージェントが見つかった場合
-        if (agent) {
-            // ツールチップを非表示
-            hideTooltip();
+        if (intersects.length > 0) {
+            const intersect = intersects[0];
+            const index = intersect.index;
             
-            // エージェント詳細パネルをカーソルの横に表示
-            showAgentDetail(agent, event);
-            return;
-        }
-        
-        // クラスタが見つかった場合
-        if (cluster && cluster.userData.department) {
-            hideTooltip();
-            showClusterPanel(cluster.userData.department, event);
+            // パーティクルのインデックスから部署情報を取得
+            const particlePositions = pointCloud.geometry.attributes.position.array;
+            const particleNum = particlePositions.length / 3;
+            
+            // パーティクルインデックスから部署を特定
+            let currentIndex = 0;
+            let deptInfo = null;
+            
+            for (let d = 0; d < departments.length; d++) {
+                if (index >= currentIndex && index < currentIndex + departments[d].memberCount) {
+                    deptInfo = departments[d];
+                    break;
+                }
+                currentIndex += departments[d].memberCount;
+            }
+            
+            if (deptInfo) {
+                // ツールチップ表示
+                const tooltip = document.getElementById('tooltip');
+                tooltip.style.display = 'block';
+                tooltip.style.left = event.clientX + 15 + 'px';
+                tooltip.style.top = event.clientY + 15 + 'px';
+                tooltip.textContent = deptInfo.name + ' - ' + generateName();
+            }
             return;
         }
     }
@@ -868,17 +815,18 @@ function showClusterPanel(dept, event) {
     document.getElementById('cluster-members').textContent = dept.memberCount + '人';
     document.getElementById('cluster-project').textContent = dept.topProject;
     
-    // トップ3のエージェントを表示（実際はデータから取得）
-    const topAgents = agents
-        .filter(a => a.userData.department.id === dept.id)
-        .sort((a, b) => b.userData.rate - a.userData.rate)
-        .slice(0, 3);
+    // トップ3のエージェントを表示（ダミーデータ）
+    const topNames = [
+        { name: generateName(), rate: 95 + Math.floor(Math.random() * 5) },
+        { name: generateName(), rate: 90 + Math.floor(Math.random() * 5) },
+        { name: generateName(), rate: 85 + Math.floor(Math.random() * 5) }
+    ];
     
     const cards = document.querySelectorAll('.agent-card');
-    topAgents.forEach((agent, i) => {
+    topNames.forEach((data, i) => {
         if (cards[i]) {
-            cards[i].querySelector('.name').textContent = agent.userData.name;
-            cards[i].querySelector('.score').textContent = agent.userData.rate + '%';
+            cards[i].querySelector('.name').textContent = data.name;
+            cards[i].querySelector('.score').textContent = data.rate + '%';
         }
     });
 }
