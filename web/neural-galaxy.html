@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agents Galaxy - 組織の神経宇宙</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: #000;
+            color: #fff;
+        }
+        
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 280px;
+            right: 0;
+            height: 100vh;
+            transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        #canvas-container.collapsed {
+            left: 0;
+        }
+        
+        /* Sidebar */
+        #sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100vh;
+            width: 280px;
+            background: rgba(10, 20, 40, 0.85);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(100, 150, 255, 0.2);
+            padding: 30px 0;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+            box-shadow: 4px 0 24px rgba(0, 100, 255, 0.15);
+        }
+        
+        #sidebar.collapsed {
+            transform: translateX(-280px);
+        }
+        
+        #sidebar-header {
+            padding: 0 25px 30px;
+            border-bottom: 1px solid rgba(100, 150, 255, 0.15);
+        }
+        
+        #sidebar-header h1 {
+            font-size: 20px;
+            color: #4fc3f7;
+            margin: 0;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+        
+        #sidebar-menu {
+            padding: 20px 0;
+        }
+        
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 16px 25px;
+            color: #90caf9;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border-left: 3px solid transparent;
+            position: relative;
+        }
+        
+        .menu-item:hover {
+            background: rgba(79, 195, 247, 0.1);
+            color: #fff;
+            border-left-color: #4fc3f7;
+        }
+        
+        .menu-item.active {
+            background: rgba(79, 195, 247, 0.15);
+            color: #fff;
+            border-left-color: #4fc3f7;
+        }
+        
+        .menu-item.active::before {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 24px;
+            background: #4fc3f7;
+            border-radius: 2px 0 0 2px;
+        }
+        
+        .menu-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 15px;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+        }
+        
+        .menu-label {
+            font-size: 15px;
+            font-weight: 500;
+        }
+        
+        /* Toggle Button */
+        #sidebar-toggle {
+            position: fixed;
+            left: 20px;
+            top: 20px;
+            width: 48px;
+            height: 48px;
+            background: rgba(10, 20, 40, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(100, 150, 255, 0.3);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 1001;
+            box-shadow: 0 4px 16px rgba(0, 100, 255, 0.2);
+        }
+        
+        #sidebar-toggle:hover {
+            background: rgba(79, 195, 247, 0.2);
+            border-color: #4fc3f7;
+            transform: scale(1.05);
+        }
+        
+        #sidebar-toggle.active {
+            left: 300px;
+        }
+        
+        .toggle-icon {
+            width: 24px;
+            height: 24px;
+            stroke: #4fc3f7;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+        }
+        
+        /* Sidebar Footer */
+        #sidebar-footer {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            right: 0;
+            padding: 20px 25px;
+            border-top: 1px solid rgba(100, 150, 255, 0.15);
+        }
+        
+        #sidebar-footer .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+            font-size: 16px;
+        }
+        
+        .user-details {
+            flex: 1;
+        }
+        
+        .user-name {
+            font-size: 14px;
+            color: #fff;
+            margin: 0;
+            font-weight: 500;
+        }
+        
+        .user-role {
+            font-size: 12px;
+            color: #90caf9;
+            margin: 2px 0 0;
+            opacity: 0.7;
+        }
+        
+        /* Content shift when sidebar is open */
+        
+        #canvas-container.shifted {
+            /* 削除: margin-left設定は不要 */
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .stat-label {
+            color: #90caf9;
+        }
+        
+        .stat-value {
+            color: #fff;
+            font-weight: bold;
+        }
+        
+        /* Cluster Insight Panel */
+        #cluster-panel {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(10, 20, 40, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(100, 150, 255, 0.3);
+            border-radius: 15px;
+            padding: 20px 30px;
+            min-width: 400px;
+            max-width: 600px;
+            display: none;
+            box-shadow: 0 8px 32px rgba(0, 100, 255, 0.3);
+            animation: slideUp 0.3s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+        
+        #cluster-panel h3 {
+            color: #4fc3f7;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .top-agents {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .agent-card {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            border: 1px solid rgba(100, 150, 255, 0.2);
+        }
+        
+        .agent-card .name {
+            font-size: 14px;
+            margin-bottom: 5px;
+            color: #fff;
+        }
+        
+        .agent-card .score {
+            font-size: 20px;
+            font-weight: bold;
+            color: #4fc3f7;
+        }
+        
+        /* Agent Detail Lens */
+        #agent-detail {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(10, 20, 40, 0.95);
+            backdrop-filter: blur(15px);
+            border: 2px solid rgba(100, 150, 255, 0.5);
+            border-radius: 20px;
+            padding: 30px;
+            min-width: 400px;
+            display: none;
+            box-shadow: 0 16px 64px rgba(0, 100, 255, 0.4);
+            animation: zoomIn 0.3s ease-out;
+        }
+        
+        @keyframes zoomIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+        
+        #agent-detail .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            opacity: 0.7;
+        }
+        
+        #agent-detail .close-btn:hover {
+            opacity: 1;
+        }
+        
+        /* Legend */
+        #legend {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(10, 20, 40, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(100, 150, 255, 0.2);
+            border-radius: 10px;
+            padding: 15px 25px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+        
+        #legend.shifted {
+            left: calc(50% + 140px);
+        }
+        
+        #legend h3 {
+            font-size: 14px;
+            margin: 0;
+            color: #4fc3f7;
+            white-space: nowrap;
+        }
+        
+        .legend-items {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            box-shadow: 0 0 8px currentColor;
+        }
+        
+        /* Loading */
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(79, 195, 247, 0.3);
+            border-top-color: #4fc3f7;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Tooltip */
+        #tooltip {
+            position: absolute;
+            background: rgba(10, 20, 40, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(100, 150, 255, 0.3);
+            border-radius: 8px;
+            padding: 10px 15px;
+            pointer-events: none;
+            display: none;
+            font-size: 12px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar Toggle Button -->
+    <button id="sidebar-toggle">
+        <svg class="toggle-icon" viewBox="0 0 24 24">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+    </button>
+    
+    <!-- Sidebar -->
+    <aside id="sidebar">
+        <div id="sidebar-header">
+            <h1>Agents Galaxy</h1>
+        </div>
+        
+        <nav id="sidebar-menu">
+            <a href="#" class="menu-item active" data-page="home">
+                <svg class="menu-icon" viewBox="0 0 24 24">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                </svg>
+                <span class="menu-label">Home</span>
+            </a>
+            
+            <a href="#" class="menu-item" data-page="dashboard">
+                <svg class="menu-icon" viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="14" width="7" height="7"></rect>
+                    <rect x="3" y="14" width="7" height="7"></rect>
+                </svg>
+                <span class="menu-label">Dashboard</span>
+            </a>
+            
+            <a href="#" class="menu-item" data-page="settings">
+                <svg class="menu-icon" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M12 2v4m0 12v4m-6.4-14.2l2.8 2.8m8.4 8.4l2.8 2.8M2 12h4m12 0h4M4.2 18.4l2.8-2.8m8.4-8.4l2.8-2.8"></path>
+                </svg>
+                <span class="menu-label">Settings</span>
+            </a>
+        </nav>
+        
+        <div id="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar">AI</div>
+                <div class="user-details">
+                    <p class="user-name">Admin User</p>
+                    <p class="user-role">System Administrator</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+    
+    <div id="canvas-container"></div>
+    
+    <div id="loading">
+        <div class="spinner"></div>
+        <p style="margin-top: 15px; color: #90caf9;">組織の神経宇宙を構築中...</p>
+    </div>
+    
+    <div id="legend">
+        <h3>部署 / Departments</h3>
+        <div class="legend-items">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #2196F3; color: #2196F3;"></div>
+                <span>営業部門</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #FFC107; color: #FFC107;"></div>
+                <span>技術部門</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #4CAF50; color: #4CAF50;"></div>
+                <span>マーケティング</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #E91E63; color: #E91E63;"></div>
+                <span>人事部門</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #9C27B0; color: #9C27B0;"></div>
+                <span>経営企画</span>
+            </div>
+        </div>
+    </div>
+    
+    <div id="cluster-panel">
+        <h3 id="cluster-name">営業部門</h3>
+        <div class="stat-item">
+            <span class="stat-label">平均活用率</span>
+            <span class="stat-value" id="cluster-rate">92%</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">メンバー数</span>
+            <span class="stat-value" id="cluster-members">45</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">主要プロジェクト</span>
+            <span class="stat-value" id="cluster-project">顧客分析AI</span>
+        </div>
+        <div class="top-agents">
+            <div class="agent-card">
+                <div class="name">田中太郎</div>
+                <div class="score">98%</div>
+            </div>
+            <div class="agent-card">
+                <div class="name">佐藤花子</div>
+                <div class="score">95%</div>
+            </div>
+            <div class="agent-card">
+                <div class="name">鈴木一郎</div>
+                <div class="score">91%</div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="agent-detail">
+        <button class="close-btn" onclick="closeAgentDetail()">×</button>
+        <h3 id="agent-name" style="color: #4fc3f7; margin-bottom: 20px;">田中太郎</h3>
+        <div class="stat-item">
+            <span class="stat-label">部署</span>
+            <span class="stat-value" id="agent-dept">営業部門</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">AI活用率</span>
+            <span class="stat-value" id="agent-rate">98%</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">今月の生成物</span>
+            <span class="stat-value" id="agent-output">342件</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">他部署連携</span>
+            <span class="stat-value" id="agent-collab">12部署</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">主な活動</span>
+            <span class="stat-value" id="agent-activity">顧客提案書生成</span>
+        </div>
+    </div>
+    
+    <div id="tooltip"></div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="./neural-galaxy.js"></script>
+</body>
+</html>
+

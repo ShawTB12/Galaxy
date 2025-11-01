@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>球体星座 - Sphere Constellation</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            display: block;
+        }
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 100;
+        }
+        #controls label {
+            display: block;
+            margin-bottom: 8px;
+        }
+        #controls input[type="range"] {
+            width: 200px;
+            vertical-align: middle;
+        }
+        #controls .value {
+            display: inline-block;
+            width: 40px;
+            text-align: right;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            margin-top: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <h3 style="margin-top: 0;">球体コントロール</h3>
+        <label>
+            星の数: <span class="value" id="countValue">8000</span>
+            <input type="range" id="starCount" min="1000" max="15000" value="8000" step="100">
+        </label>
+        <label>
+            球の半径: <span class="value" id="radiusValue">5.0</span>
+            <input type="range" id="radius" min="2" max="10" value="5" step="0.5">
+        </label>
+        <label>
+            星のサイズ: <span class="value" id="sizeValue">0.10</span>
+            <input type="range" id="starSize" min="0.01" max="0.3" value="0.1" step="0.01">
+        </label>
+        <label>
+            回転速度: <span class="value" id="speedValue">0.5</span>
+            <input type="range" id="rotationSpeed" min="0" max="2" value="0.5" step="0.1">
+        </label>
+        <button id="regenerate">球体を再生成</button>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="./sphere.js"></script>
+</body>
+</html>
+
