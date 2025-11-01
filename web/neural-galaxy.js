@@ -1089,6 +1089,7 @@ function setupSidebar() {
         isOpen = !isOpen;
         
         const dashboardContainer = document.getElementById('dashboard-container');
+        const settingsContainer = document.getElementById('settings-container');
         
         if (isOpen) {
             sidebar.classList.remove('collapsed');
@@ -1097,12 +1098,18 @@ function setupSidebar() {
             if (dashboardContainer) {
                 dashboardContainer.classList.remove('collapsed');
             }
+            if (settingsContainer) {
+                settingsContainer.classList.remove('collapsed');
+            }
         } else {
             sidebar.classList.add('collapsed');
             toggleBtn.classList.remove('active');
             canvasContainer.classList.add('collapsed');
             if (dashboardContainer) {
                 dashboardContainer.classList.add('collapsed');
+            }
+            if (settingsContainer) {
+                settingsContainer.classList.add('collapsed');
             }
         }
         
@@ -1137,8 +1144,14 @@ function handlePageChange(page) {
     
     const canvasContainer = document.getElementById('canvas-container');
     const dashboardContainer = document.getElementById('dashboard-container');
+    const settingsContainer = document.getElementById('settings-container');
     const sidebar = document.getElementById('sidebar');
     const isSidebarOpen = !sidebar.classList.contains('collapsed');
+    
+    // すべてのコンテナを非表示
+    if (canvasContainer) canvasContainer.style.display = 'none';
+    if (dashboardContainer) dashboardContainer.style.display = 'none';
+    if (settingsContainer) settingsContainer.style.display = 'none';
     
     switch(page) {
         case 'home':
@@ -1146,22 +1159,10 @@ function handlePageChange(page) {
             if (canvasContainer) {
                 canvasContainer.style.display = 'block';
             }
-            if (dashboardContainer) {
-                dashboardContainer.style.display = 'none';
-                // サイドバーの状態に応じてクラスを設定
-                if (!isSidebarOpen) {
-                    dashboardContainer.classList.add('collapsed');
-                } else {
-                    dashboardContainer.classList.remove('collapsed');
-                }
-            }
             break;
             
         case 'dashboard':
             // ダッシュボード表示
-            if (canvasContainer) {
-                canvasContainer.style.display = 'none';
-            }
             if (dashboardContainer) {
                 dashboardContainer.style.display = 'block';
                 // サイドバーの状態に応じてクラスを設定
@@ -1179,8 +1180,21 @@ function handlePageChange(page) {
             break;
             
         case 'settings':
-            // 設定画面表示（将来の拡張用）
-            alert('Settings機能は今後実装予定です');
+            // 設定画面表示
+            if (settingsContainer) {
+                settingsContainer.style.display = 'block';
+                // サイドバーの状態に応じてクラスを設定
+                if (!isSidebarOpen) {
+                    settingsContainer.classList.add('collapsed');
+                } else {
+                    settingsContainer.classList.remove('collapsed');
+                }
+                
+                // 設定を初期化
+                if (typeof window.Settings !== 'undefined' && window.Settings.initSettings) {
+                    window.Settings.initSettings();
+                }
+            }
             break;
     }
 }
