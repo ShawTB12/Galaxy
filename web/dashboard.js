@@ -4,11 +4,6 @@
 
 let dashboardData = null;
 let currentSortMode = 'contribution';
-let collabMapCanvas = null;
-let collabMapContext = null;
-let collabMapNodes = [];
-let collabMapEdges = [];
-let collabMapHoveredNode = null;
 
 // ダッシュボード初期化
 function initDashboard() {
@@ -24,7 +19,6 @@ function initDashboard() {
     // 各モジュールを初期化
     initTopAgentsModule();
     initTypeDistributionModule();
-    initCollaborationMapModule();
     initUsageTrackerModule();
     initScorecards();
     initInsights();
@@ -179,204 +173,6 @@ function initTypeDistributionModule() {
     canvas.addEventListener('mouseleave', () => {
         window.DashboardCharts.hideChartTooltip();
     });
-}
-
-// Collaboration Mapモジュールを初期化
-function initCollaborationMapModule() {
-    const canvas = document.getElementById('collaboration-map-canvas');
-    if (!canvas) return;
-    
-    collabMapCanvas = canvas;
-    collabMapContext = canvas.getContext('2d');
-    
-    // キャンバスサイズを設定
-    const container = canvas.parentElement;
-    canvas.width = container.clientWidth;
-    canvas.height = 320;
-    
-    // ノードとエッジを生成
-    generateCollaborationGraph();
-    
-    // 初回描画
-    drawCollaborationMap();
-    
-    // アニメーションループ
-    requestAnimationFrame(animateCollaborationMap);
-    
-    // イベントリスナー
-    canvas.addEventListener('mousemove', handleCollabMapMouseMove);
-    canvas.addEventListener('click', handleCollabMapClick);
-    
-    document.getElementById('collab-map-reset').addEventListener('click', () => {
-        generateCollaborationGraph();
-        drawCollaborationMap();
-    });
-}
-
-function generateCollaborationGraph() {
-    const { agents, collaborations } = dashboardData;
-    
-    // ノードを生成（上位20エージェント）
-    const topAgents = [...agents]
-        .sort((a, b) => b.usageCount - a.usageCount)
-        .slice(0, 20);
-    
-    collabMapNodes = topAgents.map((agent, index) => {
-        const angle = (index / topAgents.length) * Math.PI * 2;
-        const radius = Math.min(collabMapCanvas.width, collabMapCanvas.height) / 2 - 60;
-        
-        return {
-            id: agent.id,
-            name: agent.name,
-            type: agent.type,
-            x: collabMapCanvas.width / 2 + Math.cos(angle) * radius,
-            y: collabMapCanvas.height / 2 + Math.sin(angle) * radius,
-            targetX: collabMapCanvas.width / 2 + Math.cos(angle) * radius,
-            targetY: collabMapCanvas.height / 2 + Math.sin(angle) * radius,
-            vx: 0,
-            vy: 0,
-            radius: 5 + (agent.usageCount / 1500) * 10,
-            fixed: false,
-            usageCount: agent.usageCount
-        };
-    });
-    
-    // エッジを生成
-    const nodeIds = new Set(collabMapNodes.map(n => n.id));
-    collabMapEdges = collaborations
-        .filter(c => nodeIds.has(c.agent1Id) && nodeIds.has(c.agent2Id))
-        .map(c => ({
-            source: collabMapNodes.find(n => n.id === c.agent1Id),
-            target: collabMapNodes.find(n => n.id === c.agent2Id),
-            strength: c.connectionStrength,
-            coUsageCount: c.coUsageCount
-        }))
-        .filter(e => e.source && e.target);
-}
-
-function drawCollaborationMap() {
-    const ctx = collabMapContext;
-    
-    // 背景をクリア
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-    ctx.fillRect(0, 0, collabMapCanvas.width, collabMapCanvas.height);
-    
-    // エッジを描画
-    collabMapEdges.forEach(edge => {
-        ctx.beginPath();
-        ctx.moveTo(edge.source.x, edge.source.y);
-        ctx.lineTo(edge.target.x, edge.target.y);
-        ctx.strokeStyle = `rgba(79, 195, 247, ${edge.strength * 0.5})`;
-        ctx.lineWidth = 1 + edge.strength * 2;
-        ctx.stroke();
-    });
-    
-    // ノードを描画
-    collabMapNodes.forEach(node => {
-        const isHovered = collabMapHoveredNode === node;
-        
-        // ノード本体
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
-        ctx.fillStyle = isHovered ? '#00ffc8' : '#4fc3f7';
-        ctx.fill();
-        
-        // グロー効果
-        if (isHovered) {
-            ctx.shadowColor = '#00ffc8';
-            ctx.shadowBlur = 15;
-            ctx.strokeStyle = '#00ffc8';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            ctx.shadowBlur = 0;
-        }
-        
-        // 名前ラベル（ホバー時のみ）
-        if (isHovered) {
-            ctx.fillStyle = '#ffffff';
-            ctx.font = '12px "Orbitron", sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(node.name, node.x, node.y - node.radius - 10);
-        }
-    });
-}
-
-function animateCollaborationMap() {
-    // 簡易的な力学シミュレーション
-    collabMapNodes.forEach(node => {
-        if (node.fixed) return;
-        
-        // 中心への引力
-        const centerX = collabMapCanvas.width / 2;
-        const centerY = collabMapCanvas.height / 2;
-        const dx = centerX - node.x;
-        const dy = centerY - node.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance > 0) {
-            node.vx += (dx / distance) * 0.01;
-            node.vy += (dy / distance) * 0.01;
-        }
-        
-        // ターゲット位置への引力
-        node.vx += (node.targetX - node.x) * 0.1;
-        node.vy += (node.targetY - node.y) * 0.1;
-        
-        // 摩擦
-        node.vx *= 0.9;
-        node.vy *= 0.9;
-        
-        // 位置更新
-        node.x += node.vx;
-        node.y += node.vy;
-    });
-    
-    drawCollaborationMap();
-    requestAnimationFrame(animateCollaborationMap);
-}
-
-function handleCollabMapMouseMove(e) {
-    const rect = collabMapCanvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    let found = null;
-    collabMapNodes.forEach(node => {
-        const dx = x - node.x;
-        const dy = y - node.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        if (distance < node.radius + 5) {
-            found = node;
-        }
-    });
-    
-    if (found !== collabMapHoveredNode) {
-        collabMapHoveredNode = found;
-        
-        if (found) {
-            // 接続数を計算
-            const connections = collabMapEdges.filter(e => 
-                e.source === found || e.target === found
-            );
-            
-            const content = `
-                <strong>${found.name}</strong><br>
-                タイプ: ${found.type}<br>
-                使用回数: ${found.usageCount.toLocaleString()}<br>
-                連携数: ${connections.length}
-            `;
-            window.DashboardCharts.showChartTooltip(e.clientX, e.clientY, content);
-        } else {
-            window.DashboardCharts.hideChartTooltip();
-        }
-    }
-}
-
-function handleCollabMapClick(e) {
-    if (collabMapHoveredNode) {
-        collabMapHoveredNode.fixed = !collabMapHoveredNode.fixed;
-    }
 }
 
 // Usage Trackerモジュールを初期化
@@ -589,21 +385,6 @@ function generateReport() {
 
 // ウィンドウリサイズ時の処理
 function onDashboardResize() {
-    // Collaboration Mapのリサイズ
-    if (collabMapCanvas && collabMapCanvas.parentElement) {
-        const container = collabMapCanvas.parentElement;
-        collabMapCanvas.width = container.clientWidth;
-        collabMapCanvas.height = 320;
-        
-        // ノード位置を再計算
-        collabMapNodes.forEach((node, index) => {
-            const angle = (index / collabMapNodes.length) * Math.PI * 2;
-            const radius = Math.min(collabMapCanvas.width, collabMapCanvas.height) / 2 - 60;
-            node.targetX = collabMapCanvas.width / 2 + Math.cos(angle) * radius;
-            node.targetY = collabMapCanvas.height / 2 + Math.sin(angle) * radius;
-        });
-    }
-    
     // Type Distribution Chartの再描画
     if (dashboardData) {
         initTypeDistributionModule();
