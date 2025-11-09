@@ -8,7 +8,12 @@ let galaxyGroup, clusterGroups = [];
 let agents = [], connections = [];
 let selectedCluster = null, selectedAgent = null;
 let time = 0;
+const DEFAULT_GALAXY_ROTATION_SPEED = 0.0001;
+let currentGalaxyRotationSpeed = DEFAULT_GALAXY_ROTATION_SPEED;
+let activeDepartmentId = null;
+let resetCameraTimeoutId = null;
 let currentTheme = 'neural';
+let departmentCardHandlersInitialized = false;
 
 // シナプスパーティクルシステム用
 let pointCloud;
@@ -23,6 +28,9 @@ let coiqParticles = []; // 協働指数の微粒子群
 const sphereRadius = 8; // 球体の境界半径
 const maxVelocity = 0.01; // パーティクルの最大速度（ゆっくり）
 const maxTrailLength = 50; // 最大トレイル長さ
+let isAnimatingToDepartment = false; // カメラアニメーション中フラグ
+let originalCameraPosition = null; // 元のカメラ位置
+let originalCameraTarget = null; // 元のカメラターゲット
 
 // 部署データ（球面座標で配置）
 const departments = [
@@ -178,6 +186,10 @@ function init() {
     camera.position.set(0, 5, 20);
     camera.lookAt(0, 0, 0);
     
+    // 元のカメラ位置を初期化
+    originalCameraPosition = camera.position.clone();
+    originalCameraTarget = new THREE.Vector3(0, 0, 0);
+    
     // レンダラー設定
     renderer = new THREE.WebGLRenderer({ 
         antialias: true,
@@ -220,6 +232,9 @@ function init() {
     
     // サイドバー機能をセットアップ
     setupSidebar();
+    
+    // メガドロップダウンをセットアップ
+    setupMegaDropdown();
     
     // アニメーション開始
     animate();
@@ -752,6 +767,16 @@ function createDepartmentLabel(dept, centerPosition) {
     });
 }
 
+function setActiveDepartmentLabel(deptId) {
+    departmentLabels.forEach(({ element, department }) => {
+        if (deptId && department.id === deptId) {
+            element.classList.add('active');
+        } else {
+            element.classList.remove('active');
+        }
+    });
+}
+
 // ラベルの位置を更新（3D座標を2Dスクリーン座標に変換）
 function updateDepartmentLabels() {
     if (!renderer || !camera || !galaxyGroup) return;
@@ -950,7 +975,17 @@ function animate() {
     updateSynapseParticles();
     
     // 銀河全体のゆっくりした回転
-    galaxyGroup.rotation.y += 0.0001;
+    galaxyGroup.rotation.y += currentGalaxyRotationSpeed;
+    
+    // 強調表示中の部署エリアのアニメーション
+    departmentNebulas.forEach(nebula => {
+        if (nebula.userData.isHighlighted) {
+            // 強調表示中はスケールと透明度をアニメーション
+            const pulse = Math.sin(time * 2) * 0.1 + 1;
+            nebula.scale.setScalar((nebula.userData.originalScale || 1) * pulse);
+            nebula.material.opacity = (nebula.userData.originalOpacity || nebula.material.opacity) * (0.8 + Math.sin(time * 3) * 0.2);
+        }
+    });
     
     // 球体フレームのパルス効果（穏やかに）
     galaxyGroup.children.forEach(child => {
@@ -1071,6 +1106,296 @@ function setupEventListeners() {
     });
 }
 
+// メガドロップダウンのセットアップ
+function setupMegaDropdown() {
+    const navItems = document.querySelectorAll('.nav-item');
+    
+    navItems.forEach(navItem => {
+        const dropdown = navItem.querySelector('.mega-dropdown');
+        if (!dropdown) return;
+        
+        let timeoutId = null;
+        
+        // マウスがナビゲーションアイテムに入ったとき
+        navItem.addEventListener('mouseenter', () => {
+            clearTimeout(timeoutId);
+            dropdown.style.display = 'block';
+        });
+        
+        // マウスがナビゲーションアイテムから離れたとき
+        navItem.addEventListener('mouseleave', () => {
+            // 少し遅延させて、ドロップダウンに移動する時間を与える
+            timeoutId = setTimeout(() => {
+                dropdown.style.display = 'none';
+            }, 100);
+        });
+        
+        // マウスがドロップダウンに入ったとき
+        dropdown.addEventListener('mouseenter', () => {
+            clearTimeout(timeoutId);
+            dropdown.style.display = 'block';
+        });
+        
+        // マウスがドロップダウンから離れたとき
+        dropdown.addEventListener('mouseleave', () => {
+            timeoutId = setTimeout(() => {
+                dropdown.style.display = 'none';
+            }, 100);
+        });
+    });
+    
+    // 部署カードのクリックイベントを設定
+    // DOMContentLoaded後に実行されることを想定
+    setTimeout(() => {
+        setupDepartmentCardClickHandlers();
+    }, 100);
+}
+
+// 部署カードのクリックハンドラーを設定
+function setupDepartmentCardClickHandlers() {
+    const deptCards = document.querySelectorAll('.dept-card');
+    if (!deptCards.length) {
+        console.warn('Department cards not found yet. Retrying handler setup.');
+        setTimeout(setupDepartmentCardClickHandlers, 200);
+        return;
+    }
+    
+    deptCards.forEach(card => {
+        if (card.dataset.listenerAttached === 'true') return;
+        
+        const handleCardClick = (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const deptId = card.dataset.dept;
+            if (!deptId) return;
+            
+            console.log('Dept card clicked directly:', deptId);
+            hideMegaDropdowns();
+            focusOnDepartment(deptId);
+        };
+        
+        const handleMouseDown = (event) => {
+            event.preventDefault();
+        };
+        
+        card.addEventListener('click', handleCardClick);
+        card.addEventListener('mousedown', handleMouseDown);
+        card.dataset.listenerAttached = 'true';
+    });
+    
+    departmentCardHandlersInitialized = true;
+    console.log('Department card click handlers initialized for', deptCards.length, 'cards.');
+}
+
+function hideMegaDropdowns() {
+    const dropdowns = document.querySelectorAll('#top-nav .mega-dropdown');
+    dropdowns.forEach(dropdown => {
+        dropdown.style.display = 'none';
+    });
+}
+
+// 部署の中心位置を計算
+function getDepartmentCenter(deptId) {
+    const dept = departments.find(d => d.id === deptId);
+    if (!dept) return null;
+    
+    // 部署星雲から実際の中心位置を取得（既存の星雲が存在する場合）
+    const nebula = departmentNebulas.find(n => n.userData.department.id === deptId);
+    
+    let center;
+    if (nebula) {
+        // 星雲の位置から中心を計算
+        // 星雲のパーティクル位置の平均を計算するか、または球面座標から計算
+        center = new THREE.Vector3();
+        center.x = sphereRadius * Math.sin(dept.phi) * Math.cos(dept.theta);
+        center.y = sphereRadius * Math.sin(dept.phi) * Math.sin(dept.theta);
+        center.z = sphereRadius * Math.cos(dept.phi);
+    } else {
+        // フォールバック：球面座標から計算
+        center = new THREE.Vector3();
+        center.x = sphereRadius * Math.sin(dept.phi) * Math.cos(dept.theta);
+        center.y = sphereRadius * Math.sin(dept.phi) * Math.sin(dept.theta);
+        center.z = sphereRadius * Math.cos(dept.phi);
+    }
+    
+    return { center, dept };
+}
+
+// 既存の部署エリア（星雲）を強調表示
+function highlightDepartmentArea(deptId) {
+    // 該当する部署の星雲を探す
+    const nebula = departmentNebulas.find(n => n.userData.department.id === deptId);
+    if (!nebula) return;
+    
+    // 星雲の強調表示（スケールと透明度を変更）
+    nebula.userData.originalScale = nebula.scale.x;
+    nebula.userData.originalOpacity = nebula.material.opacity;
+    nebula.userData.isHighlighted = true;
+}
+
+function clearDepartmentHighlights(exceptDeptId = null) {
+    departmentNebulas.forEach(nebula => {
+        const dept = nebula.userData.department;
+        if (nebula.userData.isHighlighted && (!exceptDeptId || dept.id !== exceptDeptId)) {
+            nebula.scale.setScalar(nebula.userData.originalScale || 1);
+            nebula.material.opacity = nebula.userData.originalOpacity || nebula.material.opacity;
+            nebula.userData.isHighlighted = false;
+        }
+    });
+}
+
+// 部署にフォーカス（既存の3Dエリアにカメラを合わせる）
+function focusOnDepartment(deptId) {
+    console.log('=== focusOnDepartment called ===');
+    console.log('Dept ID:', deptId);
+    
+    if (isAnimatingToDepartment) {
+        console.log('Already animating, skipping');
+        return;
+    }
+    
+    const result = getDepartmentCenter(deptId);
+    if (!result) {
+        console.error('Could not find department center for:', deptId);
+        return;
+    }
+    
+    const { center, dept } = result;
+    console.log('Found department:', dept.name);
+    console.log('Department center:', center);
+    
+    galaxyGroup.updateMatrixWorld(true);
+    
+    // ホームページに切り替え
+    const homeMenuItem = document.querySelector('.menu-item[data-page="home"]');
+    if (homeMenuItem) {
+        homeMenuItem.click();
+    }
+    
+    // 元のカメラ位置を保存（初回のみ）
+    if (!originalCameraPosition) {
+        originalCameraPosition = camera.position.clone();
+        originalCameraTarget = new THREE.Vector3(0, 0, 0);
+    }
+    
+    // 既存の部署エリアを強調表示
+    clearDepartmentHighlights(deptId);
+    highlightDepartmentArea(deptId);
+    
+    activeDepartmentId = deptId;
+    setActiveDepartmentLabel(deptId);
+    
+    currentGalaxyRotationSpeed = 0;
+    
+    if (resetCameraTimeoutId) {
+        clearTimeout(resetCameraTimeoutId);
+        resetCameraTimeoutId = null;
+    }
+    
+    // カメラの目標位置を計算（部署の中心から少し離れた位置）
+    const offsetDistance = 6; // 距離を調整（部署の中心から6単位離れた位置）
+    const galaxyWorldPosition = new THREE.Vector3();
+    galaxyGroup.getWorldPosition(galaxyWorldPosition);
+    
+    const worldCenter = center.clone().applyMatrix4(galaxyGroup.matrixWorld);
+    const directionToCenter = worldCenter.clone().sub(galaxyWorldPosition).normalize();
+    const targetPosition = worldCenter.clone().add(directionToCenter.clone().multiplyScalar(offsetDistance));
+    
+    console.log('Focusing on department:', dept.name);
+    console.log('Department center:', center);
+    console.log('Direction to center:', directionToCenter);
+    console.log('Camera target position:', targetPosition);
+    
+    // アニメーションフラグを設定
+    isAnimatingToDepartment = true;
+    
+    // カメラアニメーション
+    const startPosition = camera.position.clone();
+    const startTime = Date.now();
+    const duration = 2000; // 2秒
+    
+    function animateCamera() {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // イージング関数（ease-in-out）
+        const easeProgress = progress < 0.5
+            ? 2 * progress * progress
+            : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+        
+        // カメラ位置を補間
+        camera.position.lerpVectors(startPosition, targetPosition, easeProgress);
+        
+        // カメラが部署の中心を見るように（銀河グループの回転を考慮）
+        camera.lookAt(worldCenter);
+        
+        if (progress < 1) {
+            requestAnimationFrame(animateCamera);
+        } else {
+            isAnimatingToDepartment = false;
+        }
+        
+        renderer.render(scene, camera);
+    }
+    
+    animateCamera();
+    
+    // 5秒後に元の位置に戻る
+    resetCameraTimeoutId = setTimeout(() => {
+        resetCameraPosition();
+    }, 5000);
+}
+
+// カメラを元の位置に戻す
+function resetCameraPosition() {
+    if (!originalCameraPosition || isAnimatingToDepartment) return;
+    
+    if (resetCameraTimeoutId) {
+        clearTimeout(resetCameraTimeoutId);
+        resetCameraTimeoutId = null;
+    }
+    
+    isAnimatingToDepartment = true;
+    
+    const startPosition = camera.position.clone();
+    const startTime = Date.now();
+    const duration = 2000;
+    
+    function animateCamera() {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        const easeProgress = progress < 0.5
+            ? 2 * progress * progress
+            : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+        
+        camera.position.lerpVectors(startPosition, originalCameraPosition, easeProgress);
+        camera.lookAt(originalCameraTarget);
+        
+        if (progress < 1) {
+            requestAnimationFrame(animateCamera);
+        } else {
+            isAnimatingToDepartment = false;
+            // 部署エリアの強調表示を解除
+            departmentNebulas.forEach(nebula => {
+                if (nebula.userData.isHighlighted) {
+                    nebula.scale.setScalar(nebula.userData.originalScale || 1);
+                    nebula.material.opacity = nebula.userData.originalOpacity || nebula.material.opacity;
+                    nebula.userData.isHighlighted = false;
+                }
+            });
+            activeDepartmentId = null;
+            setActiveDepartmentLabel(null);
+            currentGalaxyRotationSpeed = DEFAULT_GALAXY_ROTATION_SPEED;
+        }
+        
+        renderer.render(scene, camera);
+    }
+    
+    animateCamera();
+}
+
 // サイドバー機能のセットアップ
 function setupSidebar() {
     const sidebar = document.getElementById('sidebar');
@@ -1090,11 +1415,13 @@ function setupSidebar() {
         
         const dashboardContainer = document.getElementById('dashboard-container');
         const settingsContainer = document.getElementById('settings-container');
+        const topNav = document.getElementById('top-nav');
         
         if (isOpen) {
             sidebar.classList.remove('collapsed');
             toggleBtn.classList.add('active');
             canvasContainer.classList.remove('collapsed');
+            if (topNav) topNav.classList.remove('collapsed');
             if (dashboardContainer) {
                 dashboardContainer.classList.remove('collapsed');
             }
@@ -1105,6 +1432,7 @@ function setupSidebar() {
             sidebar.classList.add('collapsed');
             toggleBtn.classList.remove('active');
             canvasContainer.classList.add('collapsed');
+            if (topNav) topNav.classList.add('collapsed');
             if (dashboardContainer) {
                 dashboardContainer.classList.add('collapsed');
             }
