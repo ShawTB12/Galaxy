@@ -1340,11 +1340,6 @@ function focusOnDepartment(deptId) {
     }
     
     animateCamera();
-    
-    // 5秒後に元の位置に戻る
-    resetCameraTimeoutId = setTimeout(() => {
-        resetCameraPosition();
-    }, 5000);
 }
 
 // カメラを元の位置に戻す
@@ -1733,16 +1728,49 @@ function showL3Layer(dept) {
 // トップエージェントを生成
 function generateTopAgents(count) {
     const agents = [];
+    const agentNames = [
+        '資料作成エージェント',
+        'データ分析エージェント',
+        'レポート生成エージェント',
+        '翻訳エージェント',
+        '要約エージェント',
+        'コード生成エージェント',
+        '画像生成エージェント',
+        '音声認識エージェント',
+        'チャットボットエージェント',
+        '自動化エージェント',
+        '品質チェックエージェント',
+        'コンテンツ生成エージェント',
+        '顧客対応エージェント',
+        '営業支援エージェント',
+        'マーケティングエージェント'
+    ];
     const metrics = [
         { label: '生成貢献', value: () => 85 + Math.floor(Math.random() * 15) },
         { label: '協働指数', value: () => 88 + Math.floor(Math.random() * 12) },
         { label: 'AI応答精度', value: () => 90 + Math.floor(Math.random() * 10) }
     ];
     
+    // 使用済みエージェント名を追跡
+    const usedNames = new Set();
+    
     for (let i = 0; i < count; i++) {
         const metric = metrics[i % metrics.length];
+        
+        // 未使用のエージェント名を選択
+        let agentName;
+        let attempts = 0;
+        do {
+            agentName = agentNames[Math.floor(Math.random() * agentNames.length)];
+            attempts++;
+            // 無限ループを防ぐため、試行回数が多すぎる場合は重複を許可
+            if (attempts > 50) break;
+        } while (usedNames.has(agentName) && usedNames.size < agentNames.length);
+        
+        usedNames.add(agentName);
+        
         agents.push({
-            name: generateName(),
+            name: agentName,
             metricLabel: metric.label,
             metricValue: metric.value()
         });
